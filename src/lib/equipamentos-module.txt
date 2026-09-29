@@ -1,0 +1,453 @@
+/* eslint-disable no-undef */
+// Módulo Identificação de Equipamentos - injetado no iframe FireCheck (executa dentro do iframe, App é global)
+
+const EQUIP_TYPES = {
+    H: 'Hidrante', PC: 'Porta Corta Fogo', EX: 'Extintor', MG: 'Mangueira',
+    DF: 'Detector de Fumaça', AM: 'Acionador Manual', SAV: 'Sinalizador', PCH: 'Prancha'
+};
+
+const EQUIP_STATUS_BADGE = {
+    'Conforme': 'bg-emerald-100 text-emerald-700',
+    'Não Conforme': 'bg-red-100 text-red-700',
+    'Em Manutenção': 'bg-amber-100 text-amber-700'
+};
+
+const EQUIP_PER_PAGE = 10;
+
+App.prototype.equipCanManage = function() {
+    return this.currentUser && ['CILO', 'DIREX'].includes(this.currentUser.nivel);
+};
+
+App.prototype.renderEquipamentos = function() {
+    if (this.relatorioDetalhe) return this.renderRelatorioDetalhe();
+    this.equipTab = this.equipTab || 'cadastro';
+    this.equipCodigos = this.equipCodigos || [];
+    this.equipLoading = this.equipLoading || false;
+    this.equipEditing = this.equipEditing || null;
+    this.equipRelatorios = this.equipRelatorios || [];
+    this.equipRelatoriosLoading = this.equipRelatoriosLoading || false;
+    this.equipPage = this.equipPage || 1;
+    this.equipSearchTerm = this.equipSearchTerm || '';
+    this.equipRelSearchTerm = this.equipRelSearchTerm || '';
+
+    const tab = this.equipTab;
+    const tabBtn = (id, label, icon) => `
+        <button onclick="app.equipSetTab('${id}')" class="flex items-center gap-2 px-5 py-3 text-xs font-bold rounded-t-xl transition-all ${tab === id ? 'bg-white text-slate-900 border-t-2 border-fire-600' : 'text-slate-500 hover:text-slate-700 bg-slate-100'}">
+            <span>${icon}</span> ${label}
+        </button>`;
+
+    return `<div class="space-y-0">
+        <div class="flex border-b border-slate-200 bg-slate-50 rounded-t-xl">
+            ${tabBtn('cadastro', 'Cadastro / Edição de Códigos', '📋')}
+            ${tabBtn('consulta', 'Consulta de Relatórios Emitidos', '📊')}
+        </div>
+        <div class="bg-white rounded-b-xl shadow-sm border border-slate-200 border-t-0 p-6">
+            ${tab === 'cadastro' ? this.renderEquipCadastro() : this.renderEquipConsulta()}
+        </div>
+    </div>`;
+};
+
+App.prototype.equipSetTab = function(tab) {
+    this.equipTab = tab;
+    if (tab === 'consulta' && this.equipRelatorios.length === 0 && !this.equipRelatoriosLoading) {
+        this.equipBuscarRelatorios();
+    }
+    this.render();
+};
+
+App.prototype.renderEquipCadastro = function() {
+    const canManage = this.equipCanManage();
+    const editing = this.equipEditing ? this.equipCodigos.find(e => e.id === this.equipEditing) : null;
+    const today = new Date().toLocaleDateString('sv-SE');
+
+    let formHtml = '';
+    if (canManage) {
+        const tipoOpts = Object.keys(EQUIP_TYPES).map(t =>
+            `<option value="${t}" ${editing?.tipo === t ? 'selected' : ''}>${t} - ${EQUIP_TYPES[t]}</option>`
+        ).join('');
+
+        formHtml = `
+        <div class="bg-slate-900 text-white p-5 rounded-xl mb-6">
+            <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Código Gerado (Pré-visualização)</div>
+            <div class="text-3xl font-mono font-bold tracking-wider" id="eq-preview">${editing ? editing.codigo : '--'}</div>
+            <div class="text-[10px] text-slate-400 mt-2">Formato: [TIPO]-[PRÉDIO]-[BLOCO]-[ANDAR]-[Nº EQUIP]</div>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6">
+            <h3 class="text-xs font-bold text-slate-700 uppercase mb-4">${editing ? 'Editar Código' : 'Gerar Novo Código'}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tipo *</label>
+                    <select id="eq-tipo" onchange="app.equipSolicitarSugestao()" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-medium outline-none focus:border-slate-800">
+                        <option value="">Selecione...</option>
+                        ${tipoOpts}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Prédio (fixo)</label>
+                    <input id="eq-predio" value="32" disabled class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-100 text-xs font-mono font-bold text-slate-500 cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Bloco *</label>
+                    <select id="eq-bloco" onchange="app.equipSolicitarSugestao()" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-medium outline-none focus:border-slate-800">
+                        <option value="">Selecione...</option>
+                        <option value="B1" ${editing?.bloco === 'B1' ? 'selected' : ''}>B1</option>
+                        <option value="B2" ${editing?.bloco === 'B2' ? 'selected' : ''}>B2</option>
+                        <option value="B3" ${editing?.bloco === 'B3' ? 'selected' : ''}>B3</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Andar *</label>
+                    <input id="eq-andar" value="${editing?.andar || ''}" oninput="app.equipSolicitarSugestao()" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-mono outline-none focus:border-slate-800" placeholder="0, 1, 2... ou T">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nº Equipamento *</label>
+                    <input id="eq-numero" type="number" min="1" value="${editing?.numero_equipamento || ''}" oninput="app.equipAtualizarPreview()" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-mono font-bold outline-none focus:border-slate-800" placeholder="Auto">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Descrição / Localização</label>
+                    <input id="eq-descricao" value="${editing?.descricao || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Ex: Hall do 5º andar - Bloco 1">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data da Última Inspeção</label>
+                    <input id="eq-data-inspecao" type="date" value="${editing?.data_ultima_inspecao || today}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status do Equipamento</label>
+                    <select id="eq-status" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-medium outline-none focus:border-slate-800">
+                        <option value="Conforme" ${editing?.status === 'Conforme' ? 'selected' : ''}>Conforme</option>
+                        <option value="Não Conforme" ${editing?.status === 'Não Conforme' ? 'selected' : ''}>Não Conforme</option>
+                        <option value="Em Manutenção" ${editing?.status === 'Em Manutenção' ? 'selected' : ''}>Em Manutenção</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Observações</label>
+                    <input id="eq-obs" value="${editing?.observacoes || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Notas adicionais">
+                </div>
+            </div>
+            <div class="flex gap-3">
+                ${editing ? `<button onclick="app.equipCancelarEdicao()" class="px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors">Cancelar Edição</button>` : ''}
+                <button onclick="app.equipSalvar()" class="px-6 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-md transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    ${editing ? 'Atualizar Código' : 'Cadastrar Código'}
+                </button>
+            </div>
+        </div>`;
+    } else {
+        formHtml = `<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-xs text-amber-700"><b>Acesso restrito:</b> Apenas perfis CILO e DIREX podem cadastrar e editar códigos de equipamentos. Você tem permissão apenas para consulta.</div>`;
+    }
+
+    // Lista de códigos
+    const filtered = this.equipGetFiltered();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / EQUIP_PER_PAGE));
+    if (this.equipPage > totalPages) this.equipPage = 1;
+    const start = (this.equipPage - 1) * EQUIP_PER_PAGE;
+    const pageItems = filtered.slice(start, start + EQUIP_PER_PAGE);
+
+    let listHtml = '';
+    if (this.equipLoading) {
+        listHtml = `<div class="p-12 text-center"><div class="inline-block w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div><p class="text-xs text-slate-500 mt-3">Carregando códigos cadastrados...</p></div>`;
+    } else if (filtered.length === 0) {
+        listHtml = `<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-xl border border-slate-200">Nenhum código cadastrado. ${canManage ? 'Use o formulário acima para gerar o primeiro código.' : ''}</div>`;
+    } else {
+        listHtml = `
+        <div class="flex justify-between items-center mb-3">
+            <input id="eq-search" value="${this.equipSearchTerm}" oninput="app.equipFiltrar(this.value)" class="w-64 p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Buscar por código, tipo, bloco...">
+            <div class="flex gap-2">
+                <button onclick="app.equipExportarCSV()" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Exportar CSV
+                </button>
+                <button onclick="window.print()" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                    PDF
+                </button>
+            </div>
+        </div>
+        <div class="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
+            <table class="w-full text-xs text-left">
+                <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
+                    <tr>
+                        <th class="p-3">Código</th><th class="p-3">Tipo</th><th class="p-3">Bloco</th><th class="p-3">Andar</th><th class="p-3 text-center">Nº</th><th class="p-3">Status</th><th class="p-3">Descrição</th><th class="p-3">Última Inspeção</th>${canManage ? '<th class="p-3 text-center no-print">Ações</th>' : ''}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    ${pageItems.map(e => `<tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-3 font-mono font-bold text-slate-800">${e.codigo}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">${e.tipo}</span><div class="text-[9px] text-slate-400 mt-0.5">${EQUIP_TYPES[e.tipo] || ''}</div></td>
+                        <td class="p-3 font-mono text-slate-600">${e.bloco}</td>
+                        <td class="p-3 font-mono text-slate-600">${e.andar}</td>
+                        <td class="p-3 text-center font-mono font-bold">${e.numero_equipamento}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${EQUIP_STATUS_BADGE[e.status] || 'bg-slate-100 text-slate-600'}">${e.status || '—'}</span></td>
+                        <td class="p-3 text-slate-600 max-w-[200px] truncate" title="${e.descricao || ''}">${e.descricao || '—'}</td>
+                        <td class="p-3 font-mono text-slate-500 text-[10px]">${e.data_ultima_inspecao || '—'}</td>
+                        ${canManage ? `<td class="p-3 text-center no-print"><div class="flex items-center justify-center gap-1">
+                            <button onclick="app.equipEditar('${e.id}')" title="Editar" class="p-1.5 text-slate-500 hover:text-fire-700 hover:bg-slate-100 rounded-lg transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                            <button onclick="app.equipExcluir('${e.id}')" title="Excluir" class="p-1.5 text-slate-500 hover:text-fire-600 hover:bg-slate-100 rounded-lg transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                        </div></td>` : ''}
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+        ${totalPages > 1 ? this.equipRenderPagination(totalPages) : ''}`;
+    }
+
+    return formHtml + `
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Códigos Cadastrados (${filtered.length})</h3>
+    </div>
+    ${listHtml}`;
+};
+
+App.prototype.equipRenderPagination = function(totalPages) {
+    let btns = '';
+    for (let i = 1; i <= totalPages; i++) {
+        btns += `<button onclick="app.equipSetPage(${i})" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${i === this.equipPage ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100 border border-slate-200'}">${i}</button>`;
+    }
+    return `<div class="flex justify-center items-center gap-2 mt-4 no-print">${btns}</div>`;
+};
+
+App.prototype.equipSetPage = function(page) {
+    this.equipPage = page;
+    this.render();
+};
+
+App.prototype.renderEquipConsulta = function() {
+    const fmtData = d => d ? new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—';
+    const tipoLabel = t => ({ VST: 'Vistoria', RNC: 'RNC', APH: 'APH', KIT: 'Kit Trauma' }[t] || t);
+
+    let resultsHtml = '';
+    if (this.equipRelatoriosLoading) {
+        resultsHtml = `<div class="p-12 text-center"><div class="inline-block w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div><p class="text-xs text-slate-500 mt-3">Consultando relatórios...</p></div>`;
+    } else if (this.equipRelatorios.length === 0) {
+        resultsHtml = `<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-xl border border-slate-200">Digite um código de equipamento (ou parte dele) e clique em Buscar para consultar os relatórios emitidos.</div>`;
+    } else {
+        resultsHtml = `
+        <div class="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
+            <table class="w-full text-xs text-left">
+                <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
+                    <tr><th class="p-3">Nº Relatório</th><th class="p-3">Tipo</th><th class="p-3">Módulo</th><th class="p-3">Equipamento</th><th class="p-3">Responsável</th><th class="p-3">Data Emissão</th><th class="p-3">Status</th><th class="p-3 text-center">Ação</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    ${this.equipRelatorios.map(r => `<tr class="hover:bg-slate-50">
+                        <td class="p-3 font-mono font-bold text-slate-800">${r.numero}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">${tipoLabel(r.tipo)}</span></td>
+                        <td class="p-3 text-slate-600">${r.modulo_titulo || r.modulo}</td>
+                        <td class="p-3 text-slate-600 max-w-[200px] truncate" title="${r.equipamento || ''}">${r.equipamento || '—'}</td>
+                        <td class="p-3 text-slate-700 font-medium">${r.operador || '—'}</td>
+                        <td class="p-3 font-mono text-slate-500 text-[10px]">${fmtData(r.data_emissao)}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${r.status === 'Emitido' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">${r.status}</span></td>
+                        <td class="p-3 text-center"><button onclick="app.verRelatorioDetalhe('${r.id}')" class="px-3 py-1.5 text-[10px] font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg">Visualizar</button></td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>`;
+    }
+
+    return `
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6">
+        <h3 class="text-xs font-bold text-slate-700 uppercase mb-3">Busca de Relatórios por Código de Equipamento</h3>
+        <div class="flex gap-3">
+            <input id="eq-rel-search" value="${this.equipRelSearchTerm}" onkeydown="if(event.key==='Enter')app.equipBuscarRelatorios()" class="flex-1 p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-mono outline-none focus:border-slate-800" placeholder="Digite o código ou parte (ex: H-32-B1, EX-32-B2-02)">
+            <button onclick="app.equipBuscarRelatorios()" class="px-6 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-md flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>Buscar
+            </button>
+        </div>
+        <p class="text-[10px] text-slate-400 mt-2">A busca procura o código do equipamento nos campos de equipamento e endereço dos relatórios emitidos. Funciona com busca exata ou parcial.</p>
+    </div>
+    ${resultsHtml}`;
+};
+
+App.prototype.equipCarregarLista = function() {
+    this.equipLoading = true;
+    window.parent.postMessage({ type: 'firecheck-equipamento-listar' }, '*');
+};
+
+App.prototype.equipGetFiltered = function() {
+    const term = (this.equipSearchTerm || '').toLowerCase().trim();
+    if (!term) return this.equipCodigos || [];
+    return (this.equipCodigos || []).filter(e =>
+        (e.codigo || '').toLowerCase().includes(term) ||
+        (e.tipo || '').toLowerCase().includes(term) ||
+        (EQUIP_TYPES[e.tipo] || '').toLowerCase().includes(term) ||
+        (e.bloco || '').toLowerCase().includes(term) ||
+        (e.andar || '').toLowerCase().includes(term) ||
+        (e.descricao || '').toLowerCase().includes(term)
+    );
+};
+
+App.prototype.equipFiltrar = function(val) {
+    this.equipSearchTerm = val;
+    this.equipPage = 1;
+    this.render();
+};
+
+App.prototype.equipAtualizarPreview = function() {
+    const tipo = document.getElementById('eq-tipo')?.value || '';
+    const bloco = document.getElementById('eq-bloco')?.value || '';
+    const andar = document.getElementById('eq-andar')?.value || '';
+    const num = document.getElementById('eq-numero')?.value || '';
+    const andarStr = andar === 'T' ? 'T' : (andar ? String(andar).padStart(2, '0') : '');
+    const numStr = num ? String(num).padStart(2, '0') : '';
+    const preview = tipo && bloco && andarStr && numStr ? `${tipo}-32-${bloco}-${andarStr}-${numStr}` : '--';
+    const el = document.getElementById('eq-preview');
+    if (el) el.textContent = preview;
+};
+
+App.prototype.equipSolicitarSugestao = function() {
+    this.equipAtualizarPreview();
+    const tipo = document.getElementById('eq-tipo')?.value;
+    const bloco = document.getElementById('eq-bloco')?.value;
+    const andar = document.getElementById('eq-andar')?.value;
+    if (!tipo || !bloco || !andar) return;
+    if (this.equipEditing) return; // não sugerir durante edição
+    window.parent.postMessage({ type: 'firecheck-equipamento-sugerir', payload: { action: 'sugerir', tipo, bloco, andar: String(andar) } }, '*');
+};
+
+App.prototype.equipSalvar = function() {
+    const tipo = document.getElementById('eq-tipo')?.value;
+    const bloco = document.getElementById('eq-bloco')?.value;
+    const andar = document.getElementById('eq-andar')?.value?.trim();
+    const numero = document.getElementById('eq-numero')?.value;
+    const descricao = document.getElementById('eq-descricao')?.value?.trim() || '';
+    const dataInspecao = document.getElementById('eq-data-inspecao')?.value || '';
+    const status = document.getElementById('eq-status')?.value || 'Conforme';
+    const obs = document.getElementById('eq-obs')?.value?.trim() || '';
+
+    if (!tipo || !bloco || !andar || !numero) {
+        return this.showModal('Campos Obrigatórios', 'Preencha Tipo, Bloco, Andar e Número do Equipamento.');
+    }
+    if (andar !== 'T' && isNaN(Number(andar))) {
+        return this.showModal('Andar Inválido', 'O andar deve ser um número ou "T" para térreo.');
+    }
+
+    const payload = {
+        action: this.equipEditing ? 'editar' : 'criar',
+        tipo, bloco, andar: String(andar), numero_equipamento: Number(numero),
+        descricao, data_ultima_inspecao: dataInspecao, status, observacoes: obs,
+        responsavel: this.currentUser ? this.currentUser.nome : ''
+    };
+    if (this.equipEditing) payload.id = this.equipEditing;
+
+    this.showToast('Salvando código...', 'success');
+    window.parent.postMessage({ type: 'firecheck-equipamento-salvar', payload }, '*');
+};
+
+App.prototype.equipEditar = function(id) {
+    this.equipEditing = id;
+    this.equipPage = 1;
+    this.render();
+    setTimeout(() => this.equipAtualizarPreview(), 50);
+};
+
+App.prototype.equipCancelarEdicao = function() {
+    this.equipEditing = null;
+    this.render();
+};
+
+App.prototype.equipExcluir = function(id) {
+    this.showModal('Excluir Código', 'Tem certeza que deseja excluir este código de equipamento? Esta ação não pode ser desfeita.', () => {
+        window.parent.postMessage({ type: 'firecheck-equipamento-excluir', payload: { action: 'excluir', id } }, '*');
+    });
+};
+
+App.prototype.equipBuscarRelatorios = function() {
+    const term = document.getElementById('eq-rel-search')?.value?.trim() || '';
+    this.equipRelSearchTerm = term;
+    this.equipRelatoriosLoading = true;
+    this.render();
+    window.parent.postMessage({
+        type: 'firecheck-equipamento-consultar-relatorios',
+        filtros: { equipamento: term, limit: 200 }
+    }, '*');
+};
+
+App.prototype.equipExportarCSV = function() {
+    const filtered = this.equipGetFiltered();
+    if (filtered.length === 0) return this.showToast('Nenhum código para exportar', 'error');
+    const headers = ['Código', 'Tipo', 'Equipamento', 'Prédio', 'Bloco', 'Andar', 'Nº Equip', 'Status', 'Descrição', 'Data Última Inspeção', 'Responsável', 'Observações'];
+    const rows = filtered.map(e => [
+        e.codigo, e.tipo, EQUIP_TYPES[e.tipo] || '', e.predio, e.bloco, e.andar,
+        e.numero_equipamento, e.status, e.descricao, e.data_ultima_inspecao, e.responsavel_cadastro, e.observacoes
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'equipamentos_firecheck.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    this.showToast('✓ Exportação CSV gerada com ' + filtered.length + ' registro(s)', 'success');
+};
+
+// Listener para resultados das operações de equipamento
+window.addEventListener('message', function(event) {
+    if (!event.data) return;
+    const app = window.app;
+    if (!app) return;
+
+    if (event.data.type === 'firecheck-equipamento-listar-result') {
+        app.equipLoading = false;
+        if (event.data.success) {
+            app.equipCodigos = event.data.codigos || [];
+        } else {
+            app.equipCodigos = [];
+            app.showToast('✕ ' + (event.data.message || 'Erro ao listar códigos'), 'error');
+        }
+        if (app.currentModule === 'equipamentos') app.render();
+    }
+    else if (event.data.type === 'firecheck-equipamento-sugerir-result') {
+        if (event.data.success) {
+            const numInput = document.getElementById('eq-numero');
+            if (numInput && !app.equipEditing) {
+                numInput.value = event.data.proximo_numero;
+            }
+            app.equipAtualizarPreview();
+        }
+    }
+    else if (event.data.type === 'firecheck-equipamento-salvar-result') {
+        if (event.data.success) {
+            app.showToast('✓ ' + event.data.message, 'success');
+            app.equipEditing = null;
+            app.equipamentosCache = {}; // Invalida cache dos seletores em silo
+            app.equipCarregarLista();
+            app.render();
+        } else {
+            const msg = event.data.message || '';
+            if (msg.includes('duplicidade')) {
+                app.showModal('Duplicidade de Código', msg);
+            } else {
+                app.showToast('✕ ' + msg, 'error');
+            }
+        }
+    }
+    else if (event.data.type === 'firecheck-equipamento-excluir-result') {
+        if (event.data.success) {
+            app.showToast('✓ ' + event.data.message, 'success');
+            app.equipamentosCache = {}; // Invalida cache dos seletores em silo
+            app.equipCarregarLista();
+        } else {
+            app.showToast('✕ ' + event.data.message, 'error');
+        }
+    }
+    else if (event.data.type === 'firecheck-equipamento-consultar-relatorios-result') {
+        app.equipRelatoriosLoading = false;
+        if (event.data.success) {
+            app.equipRelatorios = event.data.relatorios || [];
+            if (app.equipRelatorios.length === 0) {
+                app.showToast('Nenhum relatório encontrado para este código de equipamento', 'success');
+            } else {
+                app.showToast('✓ ' + (event.data.total || 0) + ' relatório(s) encontrado(s)', 'success');
+            }
+        } else {
+            app.equipRelatorios = [];
+            app.showToast('✕ ' + (event.data.message || 'Erro na consulta'), 'error');
+        }
+        if (app.currentModule === 'equipamentos') app.render();
+    }
+});

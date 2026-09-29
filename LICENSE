@@ -1,0 +1,63 @@
+DIREITOS AUTORAIS E TERMOS DE USO — FIRECHECK PRO
+
+Copyright (c) 2026 CILO IMREA HC VILA MARIANA • Segurança Técnica
+Todos os direitos reservados.
+
+IDENTIFICAÇÃO DO SISTEMA
+
+  Nome principal: BOMBEIRO CIVIL CILO
+  Nome comercial/técnico: FireCheck Pro
+  Descrição: Plataforma de auditoria e conformidade técnica para
+             gestão de vistorias de prevenção contra incêndio
+  Endereço de acesso: https://bcimrea.base44.app
+  Conformidade: NBR & IT (Normas Brasileiras e Instruções Técnicas)
+  Versão: RBAC 2.1 • Auditável
+  Propriedade: CILO IMREA HC VILA MARIANA • Segurança Técnica
+
+TERMOS DE USO
+
+1. PROPRIEDADE INTELECTUAL
+   Este sistema, incluindo código-fonte, conteúdo textual, marcas,
+   identidade visual e configurações, é propriedade exclusiva de
+   CILO IMREA HC VILA MARIANA • Segurança Técnica.
+
+2. PRESERVAÇÃO PÚBLICA
+   O código-fonte é disponibilizado publicamente neste repositório
+   para fins de transparência, preservação e continuidade do sistema.
+   A disponibilidade pública NÃO constitui licença de uso livre.
+
+3. RESTRIÇÕES
+   É expressamente PROIBIDO:
+   - Remover ou alterar as informações de identificação, versão,
+     conformidade e créditos do sistema
+   - Remover ou alterar a marca, identidade visual e mensagens de
+     interface
+   - Modificar a estrutura de autenticação e tela de acesso
+   - Utilizar o sistema, no todo ou em parte, para fins comerciais
+     sem autorização expressa do titular
+   - Distribuir cópias modificadas que não preservem a identidade
+     original do sistema
+
+4. CONFORMIDADE TÉCNICA
+   O sistema atende às Normas Brasileiras (NBR) e Instruções Técnicas
+   (IT) do Corpo de Bombeiros, conforme documentação técnica no
+   diretório docs/.
+
+5. ACESSO AO SISTEMA
+   O sistema permanece funcional e acessível no endereço:
+   https://bcimrea.base44.app
+   Toda atualização futura no sistema deve ser refletida neste
+   repositório para manter a sincronização.
+
+6. GARANTIA
+   O sistema é fornecido "como está", sem garantias expressas ou
+   implícitas. O titular não se responsabiliza por danos diretos
+   ou indiretos decorrentes do uso do sistema.
+
+7. ATUALIZAÇÕES
+   Toda atualização do sistema deve ser versionada e preservada
+   permanentemente no histórico de versões deste repositório,
+   mantendo a integridade das informações de identificação.
+
+© 2026 CILO IMREA HC VILA MARIANA • Segurança Técnica
+FireCheck Pro • RBAC 2.1 • Auditável • Conformidade NBR & IT

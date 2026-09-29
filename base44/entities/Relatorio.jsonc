@@ -1,0 +1,110 @@
+{
+  "name": "Relatorio",
+  "type": "object",
+  "properties": {
+    "numero": {
+      "type": "string",
+      "description": "N\u00famero sequencial do relat\u00f3rio (ex: VST-001, RNC-001, APH-001, KIT-001)"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "VST",
+        "RNC",
+        "APH",
+        "KIT"
+      ],
+      "description": "Prefixo do tipo de relat\u00f3rio"
+    },
+    "modulo": {
+      "type": "string",
+      "description": "ID do m\u00f3dulo que originou o relat\u00f3rio (it22, rnc, aph, kittrauma, etc)"
+    },
+    "modulo_titulo": {
+      "type": "string",
+      "description": "T\u00edtulo do m\u00f3dulo"
+    },
+    "norma": {
+      "type": "string",
+      "description": "Subt\u00edtulo/norma t\u00e9cnica de refer\u00eancia"
+    },
+    "resp_tecnico": {
+      "type": "string"
+    },
+    "proprietario": {
+      "type": "string"
+    },
+    "equipamento": {
+      "type": "string",
+      "description": "Detalhamento do equipamento avaliado"
+    },
+    "itens_avaliados": {
+      "type": "number",
+      "default": 0
+    },
+    "conformes": {
+      "type": "number",
+      "default": 0
+    },
+    "nao_conformes": {
+      "type": "number",
+      "default": 0
+    },
+    "justificativas": {
+      "type": "string"
+    },
+    "rncs": {
+      "type": "string"
+    },
+    "operador": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que emitiu o relat\u00f3rio"
+    },
+    "operador_id": {
+      "type": "string",
+      "description": "Matr\u00edcula do usu\u00e1rio"
+    },
+    "operador_perfil": {
+      "type": "string",
+      "description": "N\u00edvel RBAC do usu\u00e1rio"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Emitido",
+        "Arquivado"
+      ],
+      "default": "Emitido"
+    },
+    "data_emissao": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "checklist_data": {
+      "type": "object",
+      "description": "Snapshot completo do checklist para visualiza\u00e7\u00e3o detalhada"
+    }
+  },
+  "required": [
+    "numero",
+    "tipo",
+    "modulo",
+    "modulo_titulo",
+    "operador",
+    "data_emissao"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "name": "Auditoria",
+  "type": "object",
+  "properties": {
+    "acao": {
+      "type": "string",
+      "enum": [
+        "emissao",
+        "consulta",
+        "visualizacao",
+        "edicao",
+        "exclusao",
+        "exportacao"
+      ],
+      "description": "Tipo de a\u00e7\u00e3o registrada na trilha de auditoria"
+    },
+    "entidade": {
+      "type": "string",
+      "description": "Entidade alvo da a\u00e7\u00e3o (relatorio, checklist)"
+    },
+    "entidade_id": {
+      "type": "string",
+      "description": "ID do registro alvo"
+    },
+    "entidade_numero": {
+      "type": "string",
+      "description": "N\u00famero do relat\u00f3rio alvo (ex: VST-001)"
+    },
+    "detalhe": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o detalhada da a\u00e7\u00e3o"
+    },
+    "operador": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que executou a a\u00e7\u00e3o"
+    },
+    "operador_id": {
+      "type": "string",
+      "description": "Matr\u00edcula do usu\u00e1rio"
+    },
+    "operador_perfil": {
+      "type": "string",
+      "description": "N\u00edvel RBAC do usu\u00e1rio"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "acao",
+    "operador",
+    "timestamp"
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

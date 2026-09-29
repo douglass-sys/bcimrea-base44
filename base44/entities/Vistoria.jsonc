@@ -1,0 +1,104 @@
+{
+  "name": "Vistoria",
+  "type": "object",
+  "properties": {
+    "modulo": {
+      "type": "string",
+      "enum": [
+        "it22",
+        "it19",
+        "it21",
+        "pcf",
+        "saida",
+        "it16"
+      ],
+      "description": "M\u00f3dulo de vistoria (IT-22 Hidrantes, IT-19 Alarme, IT-21 Extintores, NBR 11742 PCF, Rotas de Fuga, IT-16 Gest\u00e3o)"
+    },
+    "equipamento_id": {
+      "type": "string",
+      "description": "C\u00f3digo do equipamento vistoriado (hidrante) ou vazio para m\u00f3dulos sem sele\u00e7\u00e3o de equipamento",
+      "default": ""
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "em_andamento",
+        "emitida"
+      ],
+      "default": "em_andamento",
+      "description": "Status da vistoria: em_andamento (edit\u00e1vel e compartilhada) ou emitida (finalizada como relat\u00f3rio)"
+    },
+    "header": {
+      "type": "object",
+      "properties": {
+        "proprietario": {
+          "type": "string"
+        },
+        "respTecnico": {
+          "type": "string"
+        },
+        "data": {
+          "type": "string"
+        }
+      },
+      "description": "Cabe\u00e7alho do relat\u00f3rio (respons\u00e1vel t\u00e9cnico, propriet\u00e1rio, data)"
+    },
+    "answers": {
+      "type": "object",
+      "description": "Respostas do checklist (chaves: modulo-item, valores: sim/nao/nc)"
+    },
+    "justifications": {
+      "type": "object",
+      "description": "Justificativas de n\u00e3o conformidade por m\u00f3dulo"
+    },
+    "selectedHydrant": {
+      "type": "object",
+      "properties": {
+        "block": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        }
+      },
+      "description": "Hidrante selecionado (apenas para IT-22)"
+    },
+    "it16": {
+      "type": "object",
+      "description": "Dados do formul\u00e1rio IT-16 Gest\u00e3o"
+    },
+    "it21": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Lista de extintores vistoriados (IT-21)"
+    },
+    "operador": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que editou a vistoria"
+    },
+    "operador_id": {
+      "type": "string",
+      "description": "Matr\u00edcula do usu\u00e1rio"
+    },
+    "operador_perfil": {
+      "type": "string",
+      "description": "N\u00edvel RBAC do usu\u00e1rio"
+    }
+  },
+  "required": [
+    "modulo",
+    "status"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": null,
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

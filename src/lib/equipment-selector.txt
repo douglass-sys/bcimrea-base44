@@ -1,0 +1,174 @@
+/* eslint-disable no-undef */
+// Módulo Seleção de Equipamento em Silo - injetado no iframe FireCheck
+// Fornece seleção de equipamentos baseada nos códigos cadastrados na entidade EquipamentoCodigo
+
+// Mapeamento de módulos para tipos de equipamento
+const MODULO_EQUIP_TIPOS = {
+    it22: ['H'],
+    it19: ['DF', 'AM'],
+    it21: ['EX'],
+    pcf: ['PC'],
+    saida: ['SAV']
+};
+
+const MODULO_EQUIP_LABEL = {
+    it22: 'Hidrante',
+    it19: 'Detector / Acionador',
+    it21: 'Extintor',
+    pcf: 'Porta Corta-Fogo',
+    saida: 'Sinalizador / Saída'
+};
+
+App.prototype.loadEquipamentosPorTipo = function(modId) {
+    const tipos = MODULO_EQUIP_TIPOS[modId];
+    if (!tipos) return;
+    if (!this.equipamentosCache) this.equipamentosCache = {};
+    // Só carrega se não tem cache ou cache vazio para algum tipo
+    const needsLoad = tipos.some(t => !this.equipamentosCache[t]);
+    if (!needsLoad) return;
+    window.parent.postMessage({
+        type: 'firecheck-equipamento-listar-by-tipo',
+        tipos: tipos,
+        modId: modId
+    }, '*');
+};
+
+App.prototype.renderEquipamentoSelector = function(modId) {
+    const tipos = MODULO_EQUIP_TIPOS[modId];
+    if (!tipos) return '';
+
+    const label = MODULO_EQUIP_LABEL[modId] || 'Equipamento';
+    if (!this.state.selectedEquipamento) this.state.selectedEquipamento = {};
+    if (!this.state.selectedEquipamento[modId]) this.state.selectedEquipamento[modId] = { codigo: '' };
+    const selectedCodigo = this.state.selectedEquipamento[modId].codigo || '';
+
+    const cache = this.equipamentosCache || {};
+    const equipamentos = [];
+    tipos.forEach(t => {
+        if (cache[t]) {
+            cache[t].forEach(e => {
+                if (e.ativo !== false) equipamentos.push(e);
+            });
+        }
+    });
+
+    // Agrupar por bloco
+    const byBloco = {};
+    equipamentos.forEach(e => {
+        const b = e.bloco || 'Sem Bloco';
+        if (!byBloco[b]) byBloco[b] = [];
+        byBloco[b].push(e);
+    });
+
+    const loading = tipos.some(t => !cache[t]);
+
+    let options = '<option value="">Selecione o Equipamento...</option>';
+    if (loading) {
+        options = '<option value="">Carregando equipamentos...</option>';
+    } else if (equipamentos.length === 0) {
+        options = '<option value="">Nenhum equipamento cadastrado</option>';
+    } else {
+        Object.keys(byBloco).sort().forEach(b => {
+            const opts = byBloco[b].map(e =>
+                `<option value="${e.codigo}" ${e.codigo === selectedCodigo ? 'selected' : ''}>${e.codigo}${e.descricao ? ' - ' + e.descricao : ''}</option>`
+            ).join('');
+            options += `<optgroup label="${b}">${opts}</optgroup>`;
+        });
+    }
+
+    const disabled = (equipamentos.length === 0 && !loading) ? 'disabled' : '';
+    const emptyMsg = (equipamentos.length === 0 && !loading)
+        ? `<p class="text-[10px] text-amber-600 mt-1">Nenhum ${label} cadastrado. Cadastre no módulo "Identificação de Equipamentos".</p>`
+        : '';
+
+    return `
+    <div class="bg-fire-50/60 border border-fire-200/80 rounded-xl p-5 mb-6 no-print">
+        <h3 class="text-xs font-bold text-fire-800 uppercase mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-fire-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Seleção de Equipamento em Silo (${label})
+        </h3>
+        <div class="grid grid-cols-1 gap-4">
+            <div>
+                <label class="block text-[10px] font-bold text-fire-700 uppercase mb-1">Código do ${label}</label>
+                <select onchange="app.updateEquipamentoSelection('${modId}', this.value)" class="w-full p-2.5 border border-fire-300 rounded-lg bg-white text-xs outline-none focus:ring-2 focus:ring-fire-500 font-medium text-slate-700 transition-all" ${disabled}>
+                    ${options}
+                </select>
+                ${emptyMsg}
+            </div>
+        </div>
+    </div>
+    <div class="hidden print:block mb-4 border-b border-slate-300 pb-2">
+        <div class="flex items-center gap-2 text-xs">
+            <span class="font-bold uppercase text-slate-900">Equipamento Vistoriado:</span>
+            <span class="font-mono bg-slate-100 px-2 py-0.5 rounded font-bold">${selectedCodigo || 'N/A'}</span>
+        </div>
+    </div>`;
+};
+
+App.prototype.updateEquipamentoSelection = function(modId, codigo) {
+    // Flush pending save for previous equipment
+    this.flushCloudSave();
+    this._cloudSaveSuspended = true;
+
+    // Initialize if needed
+    if (!this.state.selectedEquipamento) this.state.selectedEquipamento = {};
+    if (!this.state.selectedEquipamento[modId]) this.state.selectedEquipamento[modId] = { codigo: '' };
+
+    // Set new code
+    this.state.selectedEquipamento[modId].codigo = codigo;
+
+    // IT-22 backward compat: also update selectedHydrant
+    if (modId === 'it22') {
+        this.state.selectedHydrant = this.state.selectedHydrant || { block: '', code: '' };
+        this.state.selectedHydrant.code = codigo;
+        const parts = codigo.split('-');
+        if (parts.length >= 3) this.state.selectedHydrant.block = parts[2];
+    }
+
+    // Clear answers and justifications for the module
+    Object.keys(this.state.answers).forEach(k => { if (k.startsWith(modId + '-')) delete this.state.answers[k]; });
+    if (this.state.justifications) this.state.justifications[modId] = [];
+    this.currentVistoriaId = null;
+
+    this.render();
+
+    // Load from cloud for the new equipment
+    this.loadVistoriaFromCloud(modId);
+};
+
+App.prototype.getEquipamentoIdForModule = function(modId) {
+    const codigo = this.state.selectedEquipamento?.[modId]?.codigo || '';
+    if (codigo) return codigo;
+    // Backward compat para IT-22
+    if (modId === 'it22') return this.state.selectedHydrant?.code || '';
+    return '';
+};
+
+App.prototype.getEquipamentoLabelForModule = function(modId) {
+    const codigo = this.getEquipamentoIdForModule(modId);
+    if (!codigo) return '';
+    const tipos = MODULO_EQUIP_TIPOS[modId] || [];
+    const cache = this.equipamentosCache || {};
+    for (const t of tipos) {
+        const found = (cache[t] || []).find(e => e.codigo === codigo);
+        if (found) return found.descricao || codigo;
+    }
+    return codigo;
+};
+
+// Listener para resultados do carregamento de equipamentos por tipo
+window.addEventListener('message', function(event) {
+    if (!event.data) return;
+    const app = window.app;
+    if (!app) return;
+
+    if (event.data.type === 'firecheck-equipamento-listar-by-tipo-result') {
+        if (event.data.success) {
+            if (!app.equipamentosCache) app.equipamentosCache = {};
+            (event.data.tipos || []).forEach(t => {
+                app.equipamentosCache[t] = (event.data.codigos || []).filter(e => e.tipo === t);
+            });
+        }
+        if (app.currentModule === event.data.modId) app.render();
+    }
+});

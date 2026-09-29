@@ -1,0 +1,843 @@
+/* eslint-disable no-undef */
+// Módulo Testes e Manutenção — DEA (Desfibrilador Externo Automático)
+// Injetado no iframe FireCheck (executa dentro do iframe, App é global)
+
+const DEA_STATUS_BADGE = {
+    'Operando': 'bg-emerald-100 text-emerald-700',
+    'Em Manutenção': 'bg-amber-100 text-amber-700',
+    'Fora de Uso': 'bg-red-100 text-red-700',
+    'Pendente Verificação': 'bg-slate-100 text-slate-600'
+};
+
+const DEA_FREQ_LABEL = {
+    'diaria': 'Diária', 'semanal': 'Semanal', 'mensal': 'Mensal',
+    'trimestral': 'Trimestral', 'anual': 'Anual'
+};
+
+const DEA_FREQ_DAYS = {
+    'diaria': 1, 'semanal': 7, 'mensal': 30, 'trimestral': 90, 'anual': 365
+};
+
+const DEA_VERIFICACAO_ITENS = [
+    { key: 'integridade', label: 'Integridade Física' },
+    { key: 'indicadores', label: 'Indicadores Visuais/Auditivos' },
+    { key: 'bateria', label: 'Bateria / Carga' },
+    { key: 'eletrodos', label: 'Eletrodos / Conexão' },
+    { key: 'sinal_sonoro', label: 'Sinal Sonoro / Voz' },
+    { key: 'auto_teste', label: 'Auto-teste / Diagnóstico' }
+];
+
+const DEA_MANUT_STATUS_BADGE = {
+    'Planejada': 'bg-blue-100 text-blue-700',
+    'Em Execução': 'bg-amber-100 text-amber-700',
+    'Concluída': 'bg-emerald-100 text-emerald-700',
+    'Atrasada': 'bg-red-100 text-red-700'
+};
+
+App.prototype.deaCanManage = function() {
+    return this.currentUser && ['CILO', 'DIREX', 'BOMBEIRO'].includes(this.currentUser.nivel);
+};
+
+App.prototype.deaCanEdit = function() {
+    return this.currentUser && ['CILO', 'DIREX'].includes(this.currentUser.nivel);
+};
+
+// ── RENDER PRINCIPAL ──────────────────────────────────────────
+App.prototype.renderDEA = function() {
+    this.deaTab = this.deaTab || 'painel';
+    this.deaList = this.deaList || [];
+    this.deaVerificacoes = this.deaVerificacoes || [];
+    this.deaManutencoes = this.deaManutencoes || [];
+    this.deaLoading = this.deaLoading || false;
+    this.deaEditing = this.deaEditing || null;
+    this.deaSearchTerm = this.deaSearchTerm || '';
+    this.deaVerFilterDea = this.deaVerFilterDea || '';
+    this.deaManFilterDea = this.deaManFilterDea || '';
+
+    const tab = this.deaTab;
+    const tabBtn = (id, label, icon) => `
+        <button onclick="app.deaSetTab('${id}')" class="flex items-center gap-2 px-5 py-3 text-xs font-bold rounded-t-xl transition-all ${tab === id ? 'bg-white text-slate-900 border-t-2 border-fire-600' : 'text-slate-500 hover:text-slate-700 bg-slate-100'}">
+            <span>${icon}</span> ${label}
+        </button>`;
+
+    return `<div class="space-y-0">
+        <div class="flex border-b border-slate-200 bg-slate-50 rounded-t-xl overflow-x-auto">
+            ${tabBtn('painel', 'Painel Inicial', '📊')}
+            ${tabBtn('equipamentos', 'Lista de DEAs', '📋')}
+            ${tabBtn('verificacoes', 'Testes e Verificações', '✅')}
+            ${tabBtn('manutencao', 'Manutenção Preventiva', '🔧')}
+            ${tabBtn('relatorios', 'Relatórios', '📄')}
+        </div>
+        <div class="bg-white rounded-b-xl shadow-sm border border-slate-200 border-t-0 p-6">
+            ${tab === 'painel' ? this.deaRenderPainel() : ''}
+            ${tab === 'equipamentos' ? this.deaRenderEquipamentos() : ''}
+            ${tab === 'verificacoes' ? this.deaRenderVerificacoes() : ''}
+            ${tab === 'manutencao' ? this.deaRenderManutencao() : ''}
+            ${tab === 'relatorios' ? this.deaRenderRelatorios() : ''}
+        </div>
+    </div>`;
+};
+
+App.prototype.deaSetTab = function(tab) {
+    this.deaTab = tab;
+    this.deaEditing = null;
+    if (tab === 'painel') this.deaCarregarTudo();
+    if (tab === 'equipamentos') this.deaCarregar();
+    if (tab === 'verificacoes') { this.deaCarregar(); this.deaCarregarVerificacoes(); }
+    if (tab === 'manutencao') { this.deaCarregar(); this.deaCarregarManutencoes(); }
+    this.render();
+};
+
+// ── PAINEL INICIAL ────────────────────────────────────────────
+App.prototype.deaDaysLeft = function(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    if (isNaN(d)) return null;
+    return Math.ceil((d - new Date()) / 86400000);
+};
+
+App.prototype.deaRenderPainel = function() {
+    const deas = (this.deaList || []).filter(d => d.ativo !== false);
+    const total = deas.length;
+    const operando = deas.filter(d => d.status === 'Operando').length;
+    const manutencao = deas.filter(d => d.status === 'Em Manutenção').length;
+    const foraUso = deas.filter(d => d.status === 'Fora de Uso').length;
+    const pendente = deas.filter(d => d.status === 'Pendente Verificação').length;
+
+    // Alertas de validade
+    let batVencidas = 0, batProximas = 0;
+    let eletVencidos = 0, eletProximos = 0;
+    deas.forEach(d => {
+        const batDays = this.deaDaysLeft(d.validade_bateria);
+        if (batDays !== null) { if (batDays < 0) batVencidas++; else if (batDays <= 30) batProximas++; }
+        const eletDays = this.deaDaysLeft(d.validade_eletrodos);
+        if (eletDays !== null) { if (eletDays < 0) eletVencidos++; else if (eletDays <= 30) eletProximos++; }
+    });
+
+    // Verificações atrasadas
+    const verifs = this.deaVerificacoes || [];
+    let verAtrasadas = 0;
+    deas.forEach(d => {
+        const freq = d.frequencia_verificacao || 'mensal';
+        const days = DEA_FREQ_DAYS[freq] || 30;
+        const deaVerifs = verifs.filter(v => v.dea_id === d.id).sort((a,b) => new Date(b.data_verificacao) - new Date(a.data_verificacao));
+        if (deaVerifs.length === 0) { verAtrasadas++; return; }
+        const lastVer = new Date(deaVerifs[0].data_verificacao);
+        const dueDate = new Date(lastVer.getTime() + days * 86400000);
+        if (dueDate < new Date()) verAtrasadas++;
+    });
+
+    // Manutenções atrasadas/pendentes
+    const manuts = this.deaManutencoes || [];
+    const manAtrasadas = manuts.filter(m => m.status !== 'Concluída' && m.data_prevista && new Date(m.data_prevista) < new Date()).length;
+    const manPendentes = manuts.filter(m => m.status === 'Planejada' || m.status === 'Em Execução').length;
+
+    const totalAlertas = batVencidas + batProximas + eletVencidos + eletProximos + verAtrasadas + manAtrasadas;
+
+    if (this.deaLoading) {
+        return `<div class="p-12 text-center"><div class="inline-block w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div><p class="text-xs text-slate-500 mt-3">Carregando dados...</p></div>`;
+    }
+
+    const statCard = (label, value, color, icon) => `
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${label}</span>
+                <span class="text-lg">${icon}</span>
+            </div>
+            <div class="text-3xl font-extrabold ${color}">${value}</div>
+        </div>`;
+
+    const alertCard = (count, label, color, icon) => count > 0 ? `
+        <div class="flex-1 ${color} border rounded-xl p-4 flex items-center gap-3">
+            <span class="text-2xl">${icon}</span>
+            <div><div class="text-lg font-bold">${count}</div><div class="text-[10px] font-semibold uppercase tracking-wide">${label}</div></div>
+        </div>` : '';
+
+    return `
+    <div class="space-y-6">
+        <div><h3 class="font-bold text-slate-800 text-lg mb-1">Painel Geral — Desfibriladores (DEA)</h3>
+        <p class="text-xs text-slate-500">Visão geral do parque de DEA, verificações periódicas e manutenção preventiva.</p></div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            ${statCard('Total de DEAs', total, 'text-slate-800', '📋')}
+            ${statCard('Operando', operando, 'text-emerald-600', '✅')}
+            ${statCard('Em Manutenção', manutencao, 'text-amber-600', '🔧')}
+            ${statCard('Fora de Uso', foraUso, 'text-red-600', '🚫')}
+            ${statCard('Pendente Verificação', pendente, 'text-slate-500', '⏳')}
+        </div>
+
+        ${totalAlertas > 0 ? `
+        <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+            <h4 class="text-xs font-bold text-red-700 uppercase mb-3 flex items-center gap-2">⚠ Alertas Ativos (${totalAlertas})</h4>
+            <div class="flex flex-wrap gap-3">
+                ${alertCard(batVencidas, 'Baterias Vencidas', 'bg-red-100 text-red-700', '🔋')}
+                ${alertCard(batProximas, 'Baterias a Vencer (30d)', 'bg-amber-100 text-amber-700', '🔋')}
+                ${alertCard(eletVencidos, 'Eletrodos Vencidos', 'bg-red-100 text-red-700', '⚡')}
+                ${alertCard(eletProximos, 'Eletrodos a Vencer (30d)', 'bg-amber-100 text-amber-700', '⚡')}
+                ${alertCard(verAtrasadas, 'Verificações Atrasadas', 'bg-red-100 text-red-700', '✅')}
+                ${alertCard(manAtrasadas, 'Manutenções Atrasadas', 'bg-red-100 text-red-700', '🔧')}
+            </div>
+        </div>` : `
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
+            <span class="text-2xl">✅</span>
+            <div><div class="text-sm font-bold text-emerald-700">Sem alertas ativos</div><div class="text-[10px] text-emerald-600">Todos os DEAs estão em conformidade com o cronograma.</div></div>
+        </div>`}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white border border-slate-200 rounded-xl p-4">
+                <h4 class="text-xs font-bold text-slate-600 uppercase mb-2">Manutenções Pendentes</h4>
+                <div class="text-2xl font-bold text-slate-800">${manPendentes}</div>
+                <button onclick="app.deaSetTab('manutencao')" class="mt-2 text-[10px] font-bold text-fire-700 hover:underline">Ver detalhes →</button>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4">
+                <h4 class="text-xs font-bold text-slate-600 uppercase mb-2">Verificações Registradas</h4>
+                <div class="text-2xl font-bold text-slate-800">${verifs.length}</div>
+                <button onclick="app.deaSetTab('verificacoes')" class="mt-2 text-[10px] font-bold text-fire-700 hover:underline">Ver histórico →</button>
+            </div>
+        </div>
+    </div>`;
+};
+
+// ── LISTA DE DEAs (CADASTRO) ──────────────────────────────────
+App.prototype.deaRenderEquipamentos = function() {
+    const canEdit = this.deaCanEdit();
+    const canManage = this.deaCanManage();
+    const editing = this.deaEditing ? this.deaList.find(d => d.id === this.deaEditing) : null;
+    const today = new Date().toLocaleDateString('sv-SE');
+
+    let formHtml = '';
+    if (canEdit) {
+        formHtml = `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6">
+            <h3 class="text-xs font-bold text-slate-700 uppercase mb-4">${editing ? 'Editar DEA' : 'Cadastrar Novo DEA'}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nº Patrimônio *</label>
+                    <input id="dea-patrimonio" value="${editing?.patrimonio || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-mono outline-none focus:border-slate-800" placeholder="Ex: DEA-001">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Localização *</label>
+                    <input id="dea-localizacao" value="${editing?.localizacao || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Ex: Bloco 1 - Térreo - Recepção">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Modelo / Fabricante</label>
+                    <input id="dea-modelo" value="${editing?.modelo || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Ex: HeartStart FRx / Philips">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Número de Série</label>
+                    <input id="dea-numero-serie" value="${editing?.numero_serie || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-mono outline-none focus:border-slate-800" placeholder="Nº de série do fabricante">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data Instalação</label>
+                    <input id="dea-data-instalacao" type="date" value="${editing?.data_instalacao || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Validade Bateria</label>
+                    <input id="dea-validade-bateria" type="date" value="${editing?.validade_bateria || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Validade Eletrodos</label>
+                    <input id="dea-validade-eletrodos" type="date" value="${editing?.validade_eletrodos || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status</label>
+                    <select id="dea-status" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-medium outline-none focus:border-slate-800">
+                        <option value="Operando" ${editing?.status === 'Operando' ? 'selected' : ''}>Operando</option>
+                        <option value="Em Manutenção" ${editing?.status === 'Em Manutenção' ? 'selected' : ''}>Em Manutenção</option>
+                        <option value="Fora de Uso" ${editing?.status === 'Fora de Uso' ? 'selected' : ''}>Fora de Uso</option>
+                        <option value="Pendente Verificação" ${editing?.status === 'Pendente Verificação' || !editing ? 'selected' : ''}>Pendente Verificação</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Frequência de Verificação</label>
+                    <select id="dea-frequencia" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-medium outline-none focus:border-slate-800">
+                        ${Object.keys(DEA_FREQ_LABEL).map(f => `<option value="${f}" ${editing?.frequencia_verificacao === f ? 'selected' : ''}>${DEA_FREQ_LABEL[f]}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Observações</label>
+                    <input id="dea-obs" value="${editing?.observacoes || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Notas adicionais">
+                </div>
+            </div>
+            <div class="flex gap-3">
+                ${editing ? `<button onclick="app.deaCancelarEdicao()" class="px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors">Cancelar</button>` : ''}
+                <button onclick="app.deaSalvar()" class="px-6 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-md transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    ${editing ? 'Atualizar DEA' : 'Cadastrar DEA'}
+                </button>
+            </div>
+        </div>`;
+    } else if (!this.deaList || this.deaList.length === 0) {
+        formHtml = `<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-xs text-amber-700"><b>Acesso restrito:</b> Apenas perfis CILO e DIREX podem cadastrar e editar DEAs.</div>`;
+    }
+
+    const filtered = this.deaGetFiltered();
+    let listHtml = '';
+    if (this.deaLoading) {
+        listHtml = `<div class="p-12 text-center"><div class="inline-block w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div></div>`;
+    } else if (filtered.length === 0) {
+        listHtml = `<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-xl border border-slate-200">Nenhum DEA cadastrado. ${canEdit ? 'Use o formulário acima para cadastrar.' : ''}</div>`;
+    } else {
+        listHtml = `
+        <div class="flex justify-between items-center mb-3">
+            <input value="${this.deaSearchTerm}" oninput="app.deaFiltrar(this.value)" class="w-64 p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Buscar por patrimônio, local, modelo...">
+        </div>
+        <div class="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
+            <table class="w-full text-xs text-left">
+                <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
+                    <tr>
+                        <th class="p-3">Patrimônio</th><th class="p-3">Localização</th><th class="p-3">Modelo</th><th class="p-3">Status</th><th class="p-3">Venc. Bateria</th><th class="p-3">Venc. Eletrodos</th><th class="p-3">Freq.</th>${canEdit ? '<th class="p-3 text-center no-print">Ações</th>' : ''}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    ${filtered.map(d => {
+                        const batDays = this.deaDaysLeft(d.validade_bateria);
+                        const eletDays = this.deaDaysLeft(d.validade_eletrodos);
+                        const batClass = batDays !== null && batDays < 0 ? 'text-red-600 font-bold' : batDays !== null && batDays <= 30 ? 'text-amber-600 font-bold' : 'text-slate-600';
+                        const eletClass = eletDays !== null && eletDays < 0 ? 'text-red-600 font-bold' : eletDays !== null && eletDays <= 30 ? 'text-amber-600 font-bold' : 'text-slate-600';
+                        return `<tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono font-bold text-slate-800">${d.patrimonio}</td>
+                            <td class="p-3 text-slate-600">${d.localizacao}</td>
+                            <td class="p-3 text-slate-600">${d.modelo || '—'}</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${DEA_STATUS_BADGE[d.status] || 'bg-slate-100'}">${d.status}</span></td>
+                            <td class="p-3 font-mono ${batClass}">${d.validade_bateria || '—'}${batDays !== null ? ` <span class="text-[9px]">(${batDays < 0 ? Math.abs(batDays)+'d vencida' : batDays+'d'})</span>` : ''}</td>
+                            <td class="p-3 font-mono ${eletClass}">${d.validade_eletrodos || '—'}${eletDays !== null ? ` <span class="text-[9px]">(${eletDays < 0 ? Math.abs(eletDays)+'d vencido' : eletDays+'d'})</span>` : ''}</td>
+                            <td class="p-3 text-slate-600">${DEA_FREQ_LABEL[d.frequencia_verificacao] || '—'}</td>
+                            ${canEdit ? `<td class="p-3 text-center no-print"><div class="flex items-center justify-center gap-1">
+                                <button onclick="app.deaEditar('${d.id}')" title="Editar" class="p-1.5 text-slate-500 hover:text-fire-700 hover:bg-slate-100 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                                <button onclick="app.deaArquivar('${d.id}')" title="Arquivar" class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                            </div></td>` : ''}
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`;
+    }
+
+    return formHtml + `<div class="flex items-center justify-between mb-4 mt-6"><h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">DEAs Cadastrados (${filtered.length})</h3></div>${listHtml}`;
+};
+
+// ── VERIFICAÇÕES ──────────────────────────────────────────────
+App.prototype.deaRenderVerificacoes = function() {
+    const canManage = this.deaCanManage();
+    const deas = (this.deaList || []).filter(d => d.ativo !== false);
+    const verifs = this.deaVerificacoes || [];
+    const today = new Date().toLocaleDateString('sv-SE');
+    const now = new Date().toISOString().slice(0, 16);
+
+    let formHtml = '';
+    if (canManage && deas.length > 0) {
+        const deaOpts = deas.map(d => `<option value="${d.id}">${d.patrimonio} - ${d.localizacao}</option>`).join('');
+        formHtml = `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6">
+            <h3 class="text-xs font-bold text-slate-700 uppercase mb-4">Registrar Verificação Periódica</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">DEA *</label>
+                    <select id="dea-ver-dea" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-medium outline-none focus:border-slate-800">${deaOpts}</select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data / Hora *</label>
+                    <input id="dea-ver-data" type="datetime-local" value="${now}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Responsável *</label>
+                    <input id="dea-ver-resp" value="${this.currentUser?.nome || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Nome do responsável">
+                </div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-lg p-4 mb-3">
+                <h4 class="text-[10px] font-bold text-slate-500 uppercase mb-3">Itens Verificados</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${DEA_VERIFICACAO_ITENS.map(item => `
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                        <span class="text-xs font-semibold text-slate-700">${item.label}</span>
+                        <select id="dea-ver-item-${item.key}" class="bg-slate-100 p-1.5 rounded text-xs font-bold text-slate-800 outline-none cursor-pointer">
+                            <option value="Conforme">✓ Conforme</option>
+                            <option value="Não Conforme">✕ Não Conforme</option>
+                        </select>
+                    </div>`).join('')}
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Resultado Geral</label>
+                    <select id="dea-ver-resultado" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-bold outline-none focus:border-slate-800">
+                        <option value="Conforme">Conforme</option>
+                        <option value="Não Conforme">Não Conforme</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Observações</label>
+                    <input id="dea-ver-obs" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Notas da verificação">
+                </div>
+            </div>
+            <button onclick="app.deaSalvarVerificacao()" class="px-6 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-md transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Registrar Verificação
+            </button>
+        </div>`;
+    } else if (deas.length === 0) {
+        formHtml = `<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-xs text-amber-700">Nenhum DEA cadastrado. Cadastre um DEA na aba "Lista de DEAs" antes de registrar verificações.</div>`;
+    }
+
+    // Histórico filtrável
+    const filterOpts = `<option value="">Todos os DEAs</option>` + deas.map(d => `<option value="${d.id}" ${this.deaVerFilterDea === d.id ? 'selected' : ''}>${d.patrimonio}</option>`).join('');
+    const filteredVerifs = this.deaVerFilterDea ? verifs.filter(v => v.dea_id === this.deaVerFilterDea) : verifs;
+    const sortedVerifs = [...filteredVerifs].sort((a,b) => new Date(b.data_verificacao) - new Date(a.data_verificacao));
+
+    let histHtml = '';
+    if (sortedVerifs.length === 0) {
+        histHtml = `<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-xl border border-slate-200">Nenhuma verificação registrada.</div>`;
+    } else {
+        histHtml = `
+        <div class="flex items-center gap-3 mb-3">
+            <select onchange="app.deaFiltrarVerificacoes(this.value)" class="p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800">${filterOpts}</select>
+            <span class="text-[10px] text-slate-400">${sortedVerifs.length} registro(s)</span>
+        </div>
+        <div class="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
+            <table class="w-full text-xs text-left">
+                <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
+                    <tr><th class="p-3">Data</th><th class="p-3">DEA</th><th class="p-3">Responsável</th><th class="p-3 text-center">Itens NC</th><th class="p-3 text-center">Resultado</th><th class="p-3">Observações</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    ${sortedVerifs.map(v => {
+                        const itens = v.itens || {};
+                        const ncCount = Object.values(itens).filter(i => i === 'Não Conforme').length;
+                        const dea = deas.find(d => d.id === v.dea_id);
+                        return `<tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono text-slate-600">${v.data_verificacao ? new Date(v.data_verificacao).toLocaleString('pt-BR') : '—'}</td>
+                            <td class="p-3 font-mono font-bold text-slate-800">${v.dea_patrimonio || dea?.patrimonio || '—'}</td>
+                            <td class="p-3 text-slate-700">${v.responsavel || '—'}</td>
+                            <td class="p-3 text-center font-bold ${ncCount > 0 ? 'text-red-600' : 'text-emerald-600'}">${ncCount}</td>
+                            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${v.resultado === 'Conforme' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${v.resultado}</span></td>
+                            <td class="p-3 text-slate-600 max-w-[200px] truncate" title="${v.observacoes || ''}">${v.observacoes || '—'}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`;
+    }
+
+    return formHtml + `<h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 mt-6">Histórico de Verificações</h3>${histHtml}`;
+};
+
+// ── MANUTENÇÃO PREVENTIVA ─────────────────────────────────────
+App.prototype.deaRenderManutencao = function() {
+    const canManage = this.deaCanManage();
+    const deas = (this.deaList || []).filter(d => d.ativo !== false);
+    const manuts = this.deaManutencoes || [];
+    const today = new Date().toLocaleDateString('sv-SE');
+
+    let formHtml = '';
+    if (canManage && deas.length > 0) {
+        const deaOpts = deas.map(d => `<option value="${d.id}">${d.patrimonio} - ${d.localizacao}</option>`).join('');
+        formHtml = `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6">
+            <h3 class="text-xs font-bold text-slate-700 uppercase mb-4">Nova Ordem de Manutenção</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">DEA *</label>
+                    <select id="dea-man-dea" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-medium outline-none focus:border-slate-800">${deaOpts}</select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data Prevista *</label>
+                    <input id="dea-man-data-prevista" type="date" value="${today}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Responsável Interno</label>
+                    <input id="dea-man-resp" value="${this.currentUser?.nome || ''}" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Nome do responsável">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Empresa Executante</label>
+                    <input id="dea-man-empresa" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Empresa prestadora">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Itens a Substituir</label>
+                    <input id="dea-man-itens" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Ex: Bateria, Eletrodos adultos">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Custo (R$)</label>
+                    <input id="dea-man-custo" type="number" step="0.01" min="0" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-mono outline-none focus:border-slate-800" placeholder="0.00">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Laudo Técnico</label>
+                    <input id="dea-man-laudo" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Descrição do laudo">
+                </div>
+            </div>
+            <button onclick="app.deaSalvarManutencao()" class="px-6 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-md transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                Criar Ordem de Manutenção
+            </button>
+        </div>`;
+    } else if (deas.length === 0) {
+        formHtml = `<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-xs text-amber-700">Nenhum DEA cadastrado. Cadastre um DEA na aba "Lista de DEAs" antes de criar ordens de manutenção.</div>`;
+    }
+
+    // Lista de manutenções
+    const filterOpts = `<option value="">Todos os DEAs</option>` + deas.map(d => `<option value="${d.id}" ${this.deaManFilterDea === d.id ? 'selected' : ''}>${d.patrimonio}</option>`).join('');
+    const filteredManuts = this.deaManFilterDea ? manuts.filter(m => m.dea_id === this.deaManFilterDea) : manuts;
+    const sortedManuts = [...filteredManuts].sort((a,b) => new Date(b.data_prevista) - new Date(a.data_prevista));
+
+    let listHtml = '';
+    if (sortedManuts.length === 0) {
+        listHtml = `<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-xl border border-slate-200">Nenhuma ordem de manutenção registrada.</div>`;
+    } else {
+        listHtml = `
+        <div class="flex items-center gap-3 mb-3">
+            <select onchange="app.deaFiltrarManutencoes(this.value)" class="p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800">${filterOpts}</select>
+            <span class="text-[10px] text-slate-400">${sortedManuts.length} registro(s)</span>
+        </div>
+        <div class="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
+            <table class="w-full text-xs text-left">
+                <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
+                    <tr><th class="p-3">DEA</th><th class="p-3">Data Prevista</th><th class="p-3">Data Execução</th><th class="p-3">Responsável</th><th class="p-3">Empresa</th><th class="p-3 text-center">Custo</th><th class="p-3">Status</th>${canManage ? '<th class="p-3 text-center no-print">Ação</th>' : ''}</tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    ${sortedManuts.map(m => {
+                        const dea = deas.find(d => d.id === m.dea_id);
+                        const isAtrasada = m.status !== 'Concluída' && m.data_prevista && new Date(m.data_prevista) < new Date();
+                        const status = isAtrasada && m.status === 'Planejada' ? 'Atrasada' : m.status;
+                        return `<tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono font-bold text-slate-800">${m.dea_patrimonio || dea?.patrimonio || '—'}</td>
+                            <td class="p-3 font-mono text-slate-600">${m.data_prevista || '—'}</td>
+                            <td class="p-3 font-mono text-slate-600">${m.data_execucao || '—'}</td>
+                            <td class="p-3 text-slate-700">${m.responsavel || '—'}</td>
+                            <td class="p-3 text-slate-600">${m.empresa_executante || '—'}</td>
+                            <td class="p-3 text-center font-mono text-slate-700">${m.custo ? 'R$ ' + Number(m.custo).toFixed(2) : '—'}</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${DEA_MANUT_STATUS_BADGE[status] || 'bg-slate-100'}">${status}</span></td>
+                            ${canManage ? `<td class="p-3 text-center no-print">${m.status !== 'Concluída' ? `<button onclick="app.deaConcluirManutencao('${m.id}')" class="px-3 py-1 text-[10px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg">Concluir</button>` : '<span class="text-[9px] text-slate-400">—</span>'}</td>` : ''}
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`;
+    }
+
+    return formHtml + `<h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 mt-6">Ordens de Manutenção</h3>${listHtml}`;
+};
+
+// ── RELATÓRIOS ────────────────────────────────────────────────
+App.prototype.deaRenderRelatorios = function() {
+    const deas = (this.deaList || []).filter(d => d.ativo !== false);
+    const verifs = this.deaVerificacoes || [];
+    const manuts = this.deaManutencoes || [];
+    const totalCusto = manuts.reduce((sum, m) => sum + (m.custo || 0), 0);
+    const verifsNaoConforme = verifs.filter(v => v.resultado === 'Não Conforme').length;
+    const manutsConcluidas = manuts.filter(m => m.status === 'Concluída').length;
+    const manutsAtrasadas = manuts.filter(m => m.status !== 'Concluída' && m.data_prevista && new Date(m.data_prevista) < new Date()).length;
+
+    return `
+    <div class="space-y-6">
+        <div><h3 class="font-bold text-slate-800 text-lg mb-1">Relatórios de Gestão de DEA</h3>
+        <p class="text-xs text-slate-500">Exporte relatórios consolidados para auditoria e gestão.</p></div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200"><div class="text-[10px] font-bold text-slate-400 uppercase">DEAs Ativos</div><div class="text-2xl font-extrabold text-slate-800 mt-1">${deas.length}</div></div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200"><div class="text-[10px] font-bold text-slate-400 uppercase">Verificações</div><div class="text-2xl font-extrabold text-slate-800 mt-1">${verifs.length}</div><div class="text-[9px] text-red-600">${verifsNaoConforme} não conforme</div></div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200"><div class="text-[10px] font-bold text-slate-400 uppercase">Manutenções</div><div class="text-2xl font-extrabold text-slate-800 mt-1">${manuts.length}</div><div class="text-[9px] text-emerald-600">${manutsConcluidas} concluídas</div></div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200"><div class="text-[10px] font-bold text-slate-400 uppercase">Custo Total</div><div class="text-2xl font-extrabold text-slate-800 mt-1">R$ ${totalCusto.toFixed(2)}</div>${manutsAtrasadas > 0 ? `<div class="text-[9px] text-red-600">${manutsAtrasadas} atrasadas</div>` : ''}</div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white border border-slate-200 rounded-xl p-5">
+                <h4 class="text-xs font-bold text-slate-700 uppercase mb-3">📋 Lista de DEAs</h4>
+                <p class="text-[10px] text-slate-500 mb-3">Exporta todos os DEAs com status, validades e próximas ações.</p>
+                <div class="flex gap-2">
+                    <button onclick="app.deaExportarDEAsCSV()" class="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg">Exportar CSV</button>
+                    <button onclick="window.print()" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200">Imprimir</button>
+                </div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-5">
+                <h4 class="text-xs font-bold text-slate-700 uppercase mb-3">✅ Histórico de Verificações</h4>
+                <p class="text-[10px] text-slate-500 mb-3">Exporta o histórico completo de verificações periódicas.</p>
+                <button onclick="app.deaExportarVerificacoesCSV()" class="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg">Exportar CSV</button>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-5">
+                <h4 class="text-xs font-bold text-slate-700 uppercase mb-3">🔧 Manutenções e Custos</h4>
+                <p class="text-[10px] text-slate-500 mb-3">Exporta ordens de manutenção com custos e status.</p>
+                <button onclick="app.deaExportarManutencoesCSV()" class="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg">Exportar CSV</button>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-5">
+                <h4 class="text-xs font-bold text-slate-700 uppercase mb-3">⚠ Irregularidades e Atrasos</h4>
+                <p class="text-[10px] text-slate-500 mb-3">DEAs com validades vencidas, verificações atrasadas e manutenções pendentes.</p>
+                <button onclick="app.deaExportarAlertasCSV()" class="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg">Exportar CSV</button>
+            </div>
+        </div>
+    </div>`;
+};
+
+// ── CRUD E DATA LOADING ───────────────────────────────────────
+App.prototype.deaGetFiltered = function() {
+    const term = (this.deaSearchTerm || '').toLowerCase().trim();
+    const all = (this.deaList || []).filter(d => d.ativo !== false);
+    if (!term) return all;
+    return all.filter(d =>
+        (d.patrimonio || '').toLowerCase().includes(term) ||
+        (d.localizacao || '').toLowerCase().includes(term) ||
+        (d.modelo || '').toLowerCase().includes(term) ||
+        (d.numero_serie || '').toLowerCase().includes(term)
+    );
+};
+
+App.prototype.deaFiltrar = function(val) { this.deaSearchTerm = val; this.render(); };
+App.prototype.deaFiltrarVerificacoes = function(deaId) { this.deaVerFilterDea = deaId; this.render(); };
+App.prototype.deaFiltrarManutencoes = function(deaId) { this.deaManFilterDea = deaId; this.render(); };
+
+App.prototype.deaSalvar = function() {
+    const patrimonio = document.getElementById('dea-patrimonio')?.value?.trim();
+    const localizacao = document.getElementById('dea-localizacao')?.value?.trim();
+    if (!patrimonio || !localizacao) return this.showModal('Campos Obrigatórios', 'Preencha Patrimônio e Localização.');
+
+    const payload = {
+        patrimonio,
+        localizacao,
+        modelo: document.getElementById('dea-modelo')?.value?.trim() || '',
+        numero_serie: document.getElementById('dea-numero-serie')?.value?.trim() || '',
+        data_instalacao: document.getElementById('dea-data-instalacao')?.value || '',
+        validade_bateria: document.getElementById('dea-validade-bateria')?.value || '',
+        validade_eletrodos: document.getElementById('dea-validade-eletrodos')?.value || '',
+        status: document.getElementById('dea-status')?.value || 'Pendente Verificação',
+        frequencia_verificacao: document.getElementById('dea-frequencia')?.value || 'mensal',
+        observacoes: document.getElementById('dea-obs')?.value?.trim() || '',
+        ativo: true,
+        operador: this.currentUser?.nome || '',
+        operador_id: this.currentUser?.matricula || '',
+        operador_perfil: this.currentUser?.nivel || ''
+    };
+    if (this.deaEditing) payload.id = this.deaEditing;
+
+    this.showToast('Salvando DEA...', 'success');
+    window.parent.postMessage({ type: 'firecheck-dea-salvar', payload }, '*');
+};
+
+App.prototype.deaEditar = function(id) { this.deaEditing = id; this.render(); };
+App.prototype.deaCancelarEdicao = function() { this.deaEditing = null; this.render(); };
+
+App.prototype.deaArquivar = function(id) {
+    const dea = this.deaList.find(d => d.id === id);
+    this.showModal('Arquivar DEA', `Tem certeza que deseja arquivar o DEA "${dea?.patrimonio}"? O registro será preservado para auditoria mas não aparecerá nas listas ativas.`, () => {
+        window.parent.postMessage({ type: 'firecheck-dea-arquivar', id }, '*');
+    });
+};
+
+App.prototype.deaSalvarVerificacao = function() {
+    const deaId = document.getElementById('dea-ver-dea')?.value;
+    const dataVer = document.getElementById('dea-ver-data')?.value;
+    const resp = document.getElementById('dea-ver-resp')?.value?.trim();
+    if (!deaId || !dataVer || !resp) return this.showModal('Campos Obrigatórios', 'Preencha DEA, Data e Responsável.');
+
+    const itens = {};
+    DEA_VERIFICACAO_ITENS.forEach(item => {
+        itens[item.key] = document.getElementById('dea-ver-item-' + item.key)?.value || 'Conforme';
+    });
+    const dea = this.deaList.find(d => d.id === deaId);
+
+    const payload = {
+        dea_id: deaId,
+        dea_patrimonio: dea?.patrimonio || '',
+        data_verificacao: dataVer,
+        frequencia: dea?.frequencia_verificacao || 'mensal',
+        responsavel: resp,
+        itens,
+        resultado: document.getElementById('dea-ver-resultado')?.value || 'Conforme',
+        observacoes: document.getElementById('dea-ver-obs')?.value?.trim() || '',
+        operador: this.currentUser?.nome || '',
+        operador_id: this.currentUser?.matricula || '',
+        operador_perfil: this.currentUser?.nivel || ''
+    };
+
+    this.showToast('Registrando verificação...', 'success');
+    window.parent.postMessage({ type: 'firecheck-dea-verificacao-salvar', payload }, '*');
+};
+
+App.prototype.deaSalvarManutencao = function() {
+    const deaId = document.getElementById('dea-man-dea')?.value;
+    const dataPrevista = document.getElementById('dea-man-data-prevista')?.value;
+    if (!deaId || !dataPrevista) return this.showModal('Campos Obrigatórios', 'Preencha DEA e Data Prevista.');
+    const dea = this.deaList.find(d => d.id === deaId);
+
+    const payload = {
+        dea_id: deaId,
+        dea_patrimonio: dea?.patrimonio || '',
+        data_prevista: dataPrevista,
+        responsavel: document.getElementById('dea-man-resp')?.value?.trim() || '',
+        empresa_executante: document.getElementById('dea-man-empresa')?.value?.trim() || '',
+        itens_substituidos: document.getElementById('dea-man-itens')?.value?.trim() || '',
+        custo: parseFloat(document.getElementById('dea-man-custo')?.value) || 0,
+        laudo_tecnico: document.getElementById('dea-man-laudo')?.value?.trim() || '',
+        status: 'Planejada',
+        operador: this.currentUser?.nome || '',
+        operador_id: this.currentUser?.matricula || '',
+        operador_perfil: this.currentUser?.nivel || ''
+    };
+
+    this.showToast('Criando ordem de manutenção...', 'success');
+    window.parent.postMessage({ type: 'firecheck-dea-manutencao-salvar', payload }, '*');
+};
+
+App.prototype.deaConcluirManutencao = function(id) {
+    this.showModal('Concluir Manutenção', 'Deseja marcar esta manutenção como concluída? A data de execução será registrada automaticamente.', () => {
+        window.parent.postMessage({ type: 'firecheck-dea-manutencao-concluir', id }, '*');
+    });
+};
+
+// ── DATA LOADING ──────────────────────────────────────────────
+App.prototype.deaCarregar = function() {
+    this.deaLoading = true;
+    window.parent.postMessage({ type: 'firecheck-dea-listar' }, '*');
+};
+
+App.prototype.deaCarregarVerificacoes = function() {
+    window.parent.postMessage({ type: 'firecheck-dea-verificacao-listar' }, '*');
+};
+
+App.prototype.deaCarregarManutencoes = function() {
+    window.parent.postMessage({ type: 'firecheck-dea-manutencao-listar' }, '*');
+};
+
+App.prototype.deaCarregarTudo = function() {
+    this.deaLoading = true;
+    window.parent.postMessage({ type: 'firecheck-dea-listar' }, '*');
+    window.parent.postMessage({ type: 'firecheck-dea-verificacao-listar' }, '*');
+    window.parent.postMessage({ type: 'firecheck-dea-manutencao-listar' }, '*');
+};
+
+// ── EXPORTS ──────────────────────────────────────────────────
+App.prototype.deaExportCSV = function(filename, headers, rows) {
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+    this.showToast('✓ Exportação CSV gerada', 'success');
+};
+
+App.prototype.deaExportarDEAsCSV = function() {
+    const deas = this.deaGetFiltered();
+    if (deas.length === 0) return this.showToast('Nenhum DEA para exportar', 'error');
+    const headers = ['Patrimônio', 'Localização', 'Modelo', 'Nº Série', 'Instalação', 'Validade Bateria', 'Validade Eletrodos', 'Status', 'Frequência', 'Observações'];
+    const rows = deas.map(d => [d.patrimonio, d.localizacao, d.modelo, d.numero_serie, d.data_instalacao, d.validade_bateria, d.validade_eletrodos, d.status, DEA_FREQ_LABEL[d.frequencia_verificacao] || '', d.observacoes]);
+    this.deaExportCSV('dea_equipamentos.csv', headers, rows);
+};
+
+App.prototype.deaExportarVerificacoesCSV = function() {
+    const verifs = [...(this.deaVerificacoes || [])].sort((a,b) => new Date(b.data_verificacao) - new Date(a.data_verificacao));
+    if (verifs.length === 0) return this.showToast('Nenhuma verificação para exportar', 'error');
+    const headers = ['DEA', 'Data', 'Responsável', 'Integridade', 'Indicadores', 'Bateria', 'Eletrodos', 'Sinal Sonoro', 'Auto-teste', 'Resultado', 'Observações'];
+    const rows = verifs.map(v => {
+        const i = v.itens || {};
+        return [v.dea_patrimonio, v.data_verificacao, v.responsavel, i.integridade, i.indicadores, i.bateria, i.eletrodos, i.sinal_sonoro, i.auto_teste, v.resultado, v.observacoes];
+    });
+    this.deaExportCSV('dea_verificacoes.csv', headers, rows);
+};
+
+App.prototype.deaExportarManutencoesCSV = function() {
+    const manuts = [...(this.deaManutencoes || [])].sort((a,b) => new Date(b.data_prevista) - new Date(a.data_prevista));
+    if (manuts.length === 0) return this.showToast('Nenhuma manutenção para exportar', 'error');
+    const headers = ['DEA', 'Data Prevista', 'Data Execução', 'Responsável', 'Empresa', 'Itens Substituídos', 'Custo', 'Laudo', 'Status'];
+    const rows = manuts.map(m => [m.dea_patrimonio, m.data_prevista, m.data_execucao, m.responsavel, m.empresa_executante, m.itens_substituidos, m.custo, m.laudo_tecnico, m.status]);
+    this.deaExportCSV('dea_manutencoes.csv', headers, rows);
+};
+
+App.prototype.deaExportarAlertasCSV = function() {
+    const deas = (this.deaList || []).filter(d => d.ativo !== false);
+    const verifs = this.deaVerificacoes || [];
+    const manuts = this.deaManutencoes || [];
+    const rows = [];
+    deas.forEach(d => {
+        const batDays = this.deaDaysLeft(d.validade_bateria);
+        const eletDays = this.deaDaysLeft(d.validade_eletrodos);
+        if (batDays !== null && batDays < 0) rows.push([d.patrimonio, 'Bateria Vencida', d.validade_bateria, `${Math.abs(batDays)} dias`, 'Substituir imediatamente']);
+        if (batDays !== null && batDays >= 0 && batDays <= 30) rows.push([d.patrimonio, 'Bateria a Vencer', d.validade_bateria, `${batDays} dias`, 'Programar substituição']);
+        if (eletDays !== null && eletDays < 0) rows.push([d.patrimonio, 'Eletrodos Vencidos', d.validade_eletrodos, `${Math.abs(eletDays)} dias`, 'Substituir imediatamente']);
+        if (eletDays !== null && eletDays >= 0 && eletDays <= 30) rows.push([d.patrimonio, 'Eletrodos a Vencer', d.validade_eletrodos, `${eletDays} dias`, 'Programar substituição']);
+        const freq = d.frequencia_verificacao || 'mensal';
+        const days = DEA_FREQ_DAYS[freq] || 30;
+        const deaVerifs = verifs.filter(v => v.dea_id === d.id).sort((a,b) => new Date(b.data_verificacao) - new Date(a.data_verificacao));
+        if (deaVerifs.length === 0) { rows.push([d.patrimonio, 'Verificação Pendente', '—', 'Nunca verificada', 'Realizar verificação inicial']); }
+        else {
+            const lastVer = new Date(deaVerifs[0].data_verificacao);
+            const dueDate = new Date(lastVer.getTime() + days * 86400000);
+            if (dueDate < new Date()) rows.push([d.patrimonio, 'Verificação Atrasada', deaVerifs[0].data_verificacao, `${Math.ceil((new Date() - dueDate) / 86400000)} dias de atraso`, 'Realizar verificação']);
+        }
+    });
+    manuts.forEach(m => {
+        if (m.status !== 'Concluída' && m.data_prevista && new Date(m.data_prevista) < new Date())
+            rows.push([m.dea_patrimonio, 'Manutenção Atrasada', m.data_prevista, m.status, 'Executar ou replanejar']);
+    });
+    if (rows.length === 0) return this.showToast('Nenhum alerta para exportar', 'success');
+    this.deaExportCSV('dea_alertas.csv', ['DEA', 'Tipo de Alerta', 'Data Referência', 'Detalhe', 'Ação Recomendada'], rows);
+};
+
+// ── MESSAGE LISTENER ─────────────────────────────────────────
+window.addEventListener('message', function(event) {
+    if (!event.data) return;
+    const app = window.app;
+    if (!app) return;
+
+    if (event.data.type === 'firecheck-dea-listar-result') {
+        app.deaLoading = false;
+        if (event.data.success) app.deaList = event.data.deas || [];
+        if (app.currentModule === 'dea') app.render();
+    }
+    else if (event.data.type === 'firecheck-dea-salvar-result') {
+        if (event.data.success) {
+            app.showToast('✓ ' + event.data.message, 'success');
+            app.deaEditing = null;
+            app.deaCarregar();
+        } else {
+            app.showToast('✕ ' + (event.data.message || 'Erro ao salvar'), 'error');
+        }
+    }
+    else if (event.data.type === 'firecheck-dea-arquivar-result') {
+        if (event.data.success) {
+            app.showToast('✓ ' + event.data.message, 'success');
+            app.deaCarregar();
+        } else {
+            app.showToast('✕ ' + (event.data.message || 'Erro ao arquivar'), 'error');
+        }
+    }
+    else if (event.data.type === 'firecheck-dea-verificacao-listar-result') {
+        if (event.data.success) app.deaVerificacoes = event.data.verificacoes || [];
+        if (app.currentModule === 'dea') app.render();
+    }
+    else if (event.data.type === 'firecheck-dea-verificacao-salvar-result') {
+        if (event.data.success) {
+            app.showToast('✓ ' + event.data.message, 'success');
+            app.deaCarregarVerificacoes();
+        } else {
+            app.showToast('✕ ' + (event.data.message || 'Erro ao registrar'), 'error');
+        }
+    }
+    else if (event.data.type === 'firecheck-dea-manutencao-listar-result') {
+        if (event.data.success) app.deaManutencoes = event.data.manutencoes || [];
+        if (app.currentModule === 'dea') app.render();
+    }
+    else if (event.data.type === 'firecheck-dea-manutencao-salvar-result') {
+        if (event.data.success) {
+            app.showToast('✓ ' + event.data.message, 'success');
+            app.deaCarregarManutencoes();
+        } else {
+            app.showToast('✕ ' + (event.data.message || 'Erro ao criar'), 'error');
+        }
+    }
+    else if (event.data.type === 'firecheck-dea-manutencao-concluir-result') {
+        if (event.data.success) {
+            app.showToast('✓ ' + event.data.message, 'success');
+            app.deaCarregarManutencoes();
+        } else {
+            app.showToast('✕ ' + (event.data.message || 'Erro ao concluir'), 'error');
+        }
+    }
+});

@@ -1,0 +1,79 @@
+{
+  "name": "DEAVerificacao",
+  "type": "object",
+  "properties": {
+    "dea_id": {
+      "type": "string",
+      "description": "ID do DEA vistoriado"
+    },
+    "dea_patrimonio": {
+      "type": "string",
+      "description": "Patrim\u00f4nio do DEA (denormalizado para exibi\u00e7\u00e3o)"
+    },
+    "data_verificacao": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e hora da verifica\u00e7\u00e3o"
+    },
+    "frequencia": {
+      "type": "string",
+      "enum": [
+        "diaria",
+        "semanal",
+        "mensal",
+        "trimestral",
+        "anual"
+      ]
+    },
+    "responsavel": {
+      "type": "string",
+      "description": "Respons\u00e1vel pela verifica\u00e7\u00e3o"
+    },
+    "itens": {
+      "type": "object",
+      "description": "Itens verificados: integridade, indicadores, bateria, eletrodos, sinal_sonoro, auto_teste (valores: Conforme / N\u00e3o Conforme)"
+    },
+    "resultado": {
+      "type": "string",
+      "enum": [
+        "Conforme",
+        "N\u00e3o Conforme"
+      ],
+      "default": "Conforme"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "operador": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que registrou"
+    },
+    "operador_id": {
+      "type": "string",
+      "description": "Matr\u00edcula do usu\u00e1rio"
+    },
+    "operador_perfil": {
+      "type": "string",
+      "description": "N\u00edvel RBAC do usu\u00e1rio"
+    }
+  },
+  "required": [
+    "dea_id",
+    "data_verificacao",
+    "resultado"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

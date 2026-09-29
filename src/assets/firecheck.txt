@@ -1,0 +1,2429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FireCheck Pro - Sistema Integrado de Vistorias e Conformidade Técnica</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Roboto Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e'
+                        },
+                        fire: {
+                            50: '#fef2f2',
+                            100: '#ffe1e1',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            800: '#991b1b',
+                            900: '#7f1d1d'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- STYLES_INJECTED_BY_REACT -->
+</head>
+<body class="text-slate-800 antialiased h-screen flex overflow-hidden">
+
+    <!-- TELA DE LOGIN (Sobreposta) -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex overflow-hidden border border-slate-100">
+            <!-- Lado Esquerdo (Branding do Sistema) -->
+            <div class="w-1/2 bg-gradient-to-br from-fire-700 via-fire-800 to-slate-900 p-10 text-white hidden md:flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+                    <svg class="w-80 h-80 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="p-3 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
+                            <svg class="w-8 h-8 text-fire-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/></svg>
+                        </div>
+                        <h1 class="text-2xl font-black tracking-tight">BOMBEIRO CIVIL <span class="text-fire-500 font-light"> CILO</span></h1>
+                    </div>
+                    <p class="text-slate-200 text-sm leading-relaxed mb-4">
+                        Plataforma de auditoria e conformidade técnica para gestão de vistorias de prevenção contra incêndio.
+                    </p>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-xs font-mono text-fire-100 border border-white/10">
+                        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Conformidade NBR & IT
+                    </div>
+                </div>
+                <div class="text-xs text-slate-400 font-mono">
+                    &copy; 2026 CILO IMREA HC VILA MARIANA &bull; Segurança Técnica
+                </div>
+            </div>
+            
+            <!-- Lado Direito (Formulário dinâmico via JS) -->
+            <div class="w-full md:w-1/2 p-8 md:p-12 overflow-y-auto max-h-[90vh]" id="auth-forms">
+                <!-- Conteúdo injetado via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- BACKDROP PARA SIDEBAR MOBILE -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop no-print" onclick="app.toggleSidebar(false)"></div>
+
+    <!-- SIDEBAR DE NAVEGAÇÃO -->
+    <aside class="sidebar w-64 bg-slate-900 text-white flex flex-col shadow-xl z-20 flex-shrink-0 transition-all duration-300 hidden" id="main-sidebar">
+        <div class="p-5 border-b border-slate-800 flex items-center gap-3 bg-slate-950/50">
+            <div class="p-2 bg-fire-600 rounded-lg text-white shadow-lg shadow-fire-600/30">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/></svg>
+            </div>
+            <div>
+                <h1 class="font-bold text-base tracking-tight leading-none text-white">FireCheck <span class="text-fire-500">Pro</span></h1>
+                <p class="text-[10px] text-slate-400 font-mono uppercase mt-1 tracking-wider" id="user-role-display">SISTEMA</p>
+            </div>
+        </div>
+
+        <!-- Info do Usuário Logado -->
+        <div class="px-5 py-3 border-b border-slate-800 bg-slate-800/40 flex items-center justify-between">
+            <div class="overflow-hidden pr-2">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Operador</p>
+                <p class="text-xs font-bold text-slate-200 truncate" id="user-name-display">Carregando...</p>
+            </div>
+            <button onclick="app.logout()" title="Sair do Sistema" class="p-2 text-slate-400 hover:text-fire-400 hover:bg-slate-800 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            </button>
+        </div>
+
+        <!-- Navegação por Módulos (RBAC) -->
+        <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-1" id="nav-menu">
+            <!-- Items de menu injetados dinamicamente pelo JS -->
+        </nav>
+
+        <div class="p-3 border-t border-slate-800/80 text-[10px] text-center text-slate-500 font-mono">
+            Versão RBAC 2.1 &bull; Auditável
+        </div>
+    </aside>
+
+    <!-- ÁREA DE CONTEÚDO PRINCIPAL -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-slate-100 relative main-content hidden" id="main-panel">
+        
+        <!-- Toolbar Superior Header -->
+        <header class="bg-white h-16 border-b border-slate-200 flex justify-between items-center px-4 md:px-6 shadow-sm flex-shrink-0 no-print z-10">
+            <div class="flex items-center gap-3">
+                <button id="hamburger-btn" onclick="app.toggleSidebar()" class="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-700" title="Menu de Navegação">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <h2 id="page-title" class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <!-- Título do Módulo Injetado Dinamicamente -->
+                </h2>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div id="save-status" class="text-xs font-medium text-emerald-600 flex items-center gap-1.5 opacity-0 transition-opacity bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    <span>Salvo Automaticamente</span>
+                </div>
+                
+                <!-- Botões de Ação Dinâmicos (Confirmar, Resetar, Imprimir) -->
+                <div id="action-buttons" class="flex items-center gap-2"></div>
+            </div>
+        </header>
+
+        <!-- Container do Documento com Rolagem -->
+        <div id="scroll-container" class="flex-1 overflow-y-auto p-4 md:p-8 print:p-0 print:overflow-visible bg-slate-100">
+            <div id="content-area" class="max-w-[210mm] mx-auto bg-white shadow-lg rounded-xl min-h-[297mm] print:shadow-none print:w-full print:max-w-none transition-all">
+                <!-- O formulário/documento ativo será renderizado aqui -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL CUSTOMIZADO PARA SUBTITUTIR ALERT E CONFIRM -->
+    <div id="modal-overlay" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 transform transition-all">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div id="modal-icon-container" class="p-3 rounded-xl bg-amber-50 text-amber-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <h3 id="modal-title" class="text-lg font-bold text-slate-800">Atenção</h3>
+                </div>
+                <p id="modal-message" class="text-slate-600 text-sm leading-relaxed mb-6"></p>
+                <div class="flex items-center justify-end gap-3" id="modal-actions">
+                    <!-- Botões injetados via script -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
+
+    <!-- NAVEGAÇÃO INFERIOR (MOBILE) -->
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-lg no-print">
+        <div id="bottom-nav-items" class="flex justify-around items-stretch overflow-x-auto max-w-full h-16">
+            <!-- Items injetados via JS -->
+        </div>
+    </nav>
+
+    <script>
+        /* --- DADOS E ESTRUTURAS DO SISTEMA FIRECHECK PRO --- */
+
+        // DADOS_INJECTED_BY_REACT (HYDRANT_DATA, KIT_UNITS, KIT_EXTERNO, KIT_BOLSA, KIT_PARTO)
+
+        // Códigos/Siglas por tipo de inspeção para numeração de relatórios
+        const MODULE_CODES = {
+            it22: { prefix: 'VST', label: 'IT 22 - Hidrantes' },
+            it19: { prefix: 'VST', label: 'IT 19 - Alarme' },
+            it21: { prefix: 'VST', label: 'IT 21 - Extintores' },
+            pcf: { prefix: 'VST', label: 'NBR 11742 - PCF' },
+            saida: { prefix: 'VST', label: 'Rotas de Fuga' },
+            it16: { prefix: 'VST', label: 'IT 16 - Gestão' },
+            rnc: { prefix: 'RNC', label: 'RNC - Relatório' },
+            aph: { prefix: 'APH', label: 'APH - Atendimento' },
+            kittrauma: { prefix: 'KIT', label: 'Kit Trauma' },
+            dea: { prefix: 'DEA', label: 'DEA - Desfibrilador' }
+        };
+
+        const CONFIG = {
+            modules: [
+                { id: 'dashboard', title: 'Painel Geral', subtitle: 'Acesso Rápido a Módulos', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z', type: 'menu' },
+                { id: 'manager', title: 'Gerenciador Geral', subtitle: 'Status Global e Conformidade', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', type: 'manager' },
+                { id: 'it22', title: 'IT 22 - Hidrantes', subtitle: 'Anexo F - Comissionamento de Hidrantes', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', type: 'checklist' },
+                { id: 'it19', title: 'IT 19 - Alarme', subtitle: 'Anexo B - Detecção e Alarme Wireless', icon: 'M13 10V3L4 14h7v7l9-11h-7z', type: 'checklist' },
+                { id: 'it21', title: 'IT 21 - Extintores', subtitle: 'Inspeção e Proteção por Extintores', icon: 'M6 21a2 2 0 002 2h8a2 2 0 002-2V8a2 2 0 00-2-2h-3v-1a1 1 0 00-1-1h-2a1 1 0 00-1 1v1H8a2 2 0 00-2 2v13z', type: 'extinguisher' },
+                { id: 'pcf', title: 'NBR 11742 - PCF', subtitle: 'Portas Corta-Fogo de Emergência', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4', type: 'checklist' },
+                { id: 'saida', title: 'Rotas de Fuga', subtitle: 'Saídas e Sinalização de Emergência', icon: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1', type: 'checklist' },
+                { id: 'it16', title: 'IT 16 - Gestão', subtitle: 'Anexo D - Informações Operacionais', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', type: 'form' },
+                { id: 'rnc', title: 'RNC - Relatório', subtitle: 'Relatório de Não Conformidades', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', type: 'rnc' },
+                { id: 'aph', title: 'APH - Atendimento', subtitle: 'Relatório de Ocorrências Pré-Hospitalares', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z', type: 'aph' },
+                { id: 'kittrauma', title: 'Kit Trauma', subtitle: 'Controle Mensal - IMREA HC FMUSP', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', type: 'kittrauma' },
+                { id: 'relatorios', title: 'Consultar Relatórios', subtitle: 'Relatórios Emitidos e Auditoria', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M5 7h14M7 11h6M7 15h4', type: 'relatorios' },
+                { id: 'equipamentos', title: 'Identificação de Equipamentos', subtitle: 'Códigos Únicos e Consulta de Relatórios', icon: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z', type: 'equipamentos' },
+                { id: 'dea', title: 'Testes e Manutenção — DEA', subtitle: 'Desfibriladores - Verificações e Manutenção Preventiva', icon: 'M22 12h-2l-3 9L9 3l-3 9H2', type: 'dea' },
+                { id: 'admin', title: 'Administração CILO', subtitle: 'Gestão de Usuários e Permissões', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', type: 'admin' }
+            ],
+            
+            // Controle de Acesso Baseado em Perfis (RBAC)
+            permissions: {
+                'BOMBEIRO': ['dashboard', 'it22', 'it19', 'it21', 'pcf', 'saida', 'it16', 'rnc', 'aph', 'kittrauma', 'relatorios', 'equipamentos', 'dea'],
+                'BRIGADISTA': ['rnc', 'kittrauma', 'relatorios', 'equipamentos'],
+                'DIREX': ['manager', 'rnc', 'aph', 'kittrauma', 'relatorios', 'equipamentos', 'dea'],
+                'CILO': ['dashboard', 'manager', 'it22', 'it19', 'it21', 'pcf', 'saida', 'it16', 'rnc', 'aph', 'kittrauma', 'relatorios', 'admin', 'equipamentos', 'dea']
+            },
+
+            // Perguntas padronizadas conforme Normas Técnicas
+            checklists: {
+                it22: [
+                    { t: '1. Hidrantes/Mangotinhos', q: ['1.1 O sistema atende ao leiaute do projeto?', '1.2 Todos os compartimentos estão protegidos?', '1.3 Posição correta conforme projeto aprovado?', '1.4 Desobstruídos, acessíveis e sinalizados?', '1.5 Ausência de vazamentos na tubulação/válvula?', '1.6 Mangueiras em bom estado de conservação?', '1.7 Abrigos conforme especificações da IT 22?', '1.8 Esguichos e chaves de mangueira presentes?'] },
+                    { t: '2. Bombas de Incêndio', q: ['2.1 Bomba principal instalada adequadamente?', '2.2 Bomba jóquei operacional e parametrizada?', '2.3 Compartimento protegido contra intempéries?', '2.4 Área da bomba isenta de materiais combustíveis?', '2.5 Ausência de vazamentos na casa de bombas?', '2.6 Vazão e pressão de operação corretas?', '2.7 Manômetros calibrados e funcionais?', '2.8 Válvulas de corte travadas na posição aberta?'] },
+                    { t: '3. Tubulação e Recalque', q: ['3.1 Tubulação sem danos mecânicos ou corrosão?', '3.2 Pintada na cor vermelha e identificada?', '3.3 Registro de recalque sinalizado e desobstruído?'] }
+                ],
+                it19: [
+                    { t: '1. Central e Painéis de Alarme', q: ['1.1 Central energizada e sem mensagens de falha?', '1.2 Recebe sinal de todos os dispositivos instalados?', '1.3 Baterias operacionais e com carga nominal?'] },
+                    { t: '2. Dispositivos Wireless / Endereçáveis', q: ['2.1 Teste de acionamento individual realizado com sucesso?', '2.2 Nível de sinal RF adequado com a central?', '2.3 Baterias dos acionadores com carga satisfatória?', '2.4 Fixação firme e em altura regulamentar?'] },
+                    { t: '3. Avisadores Sonoros e Visuais', q: ['3.1 Alarme sonoro audível em toda a edificação?', '3.2 Sinalização visual operante e em local visível?'] }
+                ],
+                pcf: [
+                    { t: '1. Folha da Porta Corta-Fogo', q: ['1.1 Folha íntegra, sem amassados, perfurações ou ferrugem?', '1.2 Selo ABNT/INMETRO visível e legível?', '1.3 Acabamento e pintura protetiva adequados?'] },
+                    { t: '2. Ferragens e Mecanismos', q: ['2.1 Dobradiças lubrificadas e ajustadas?', '2.2 Fechadura operando livremente sem uso de chaves?', '2.3 Fechamento automático completo (>45º de abertura)?', '2.4 Selecionador de folhas operante (para portas duplas)?'] },
+                    { t: '3. Vedação e Desobstrução', q: ['3.1 Porta totalmente livre de obstruções ou calços?', '3.2 Vedações intumescentes fixadas e preservadas?'] }
+                ],
+                saida: [
+                    { t: '1. Rotas e Corredores de Fuga', q: ['1.1 Corredores totalmente desobstruídos?', '1.2 Piso antiderrapante, regular e sem ressaltos?', '1.3 Corrimãos contínuos e firmemente fixados?'] },
+                    { t: '2. Iluminação e Sinalização de Emergência', q: ['2.1 Bloco autônomo acende na falta de energia?', '2.2 Autonomia mínima testada (mínimo 1 hora)?', '2.3 Placas fotoluminescentes visíveis no trajeto?'] },
+                    { t: '3. Barras Antipânico', q: ['3.1 Abertura fácil sob leve pressão manual?', '3.2 Abertura no sentido de fluxo de fuga?'] }
+                ]
+            }
+        };
+
+        class App {
+            constructor() {
+                this.state = this.loadState();
+                this.users = this.loadUsers();
+                this.saveUsers(); // Persiste correção da senha do admin principal
+                this.currentUser = null;
+                this.currentModule = 'dashboard';
+                this.adminMode = 'list';
+                this.userToEdit = null;
+                this.relatorios = [];
+                this.relatorioDetalhe = null;
+                this.relatoriosLoading = false;
+                this.submissionConfirmed = false;
+                this.submissionStatus = null;
+                this.emittedReportNumber = null;
+                this.currentVistoriaId = null;
+                this.allVistorias = [];
+                this._cloudSaveTimer = null;
+                this._cloudSaveSuspended = false;
+                this._syncStatus = 'idle';
+                window.app = this;
+                
+                window.addEventListener('message', (event) => {
+                    if (!event.data) return;
+                    if (event.data.type === 'firecheck-vistoria-result') {
+                        if (event.data.success) {
+                            this.showToast('✓ ' + event.data.message, 'success');
+                        } else {
+                            this.showToast('✕ ' + event.data.message, 'error');
+                        }
+                    }
+                    else if (event.data.type === 'firecheck-emitir-relatorio-result') {
+                        if (event.data.success) {
+                            this.submissionConfirmed = true;
+                            this.submissionStatus = 'success';
+                            this.emittedReportNumber = event.data.numero || '';
+                            this.showToast('✓ Relatório ' + event.data.numero + ' emitido e arquivado no banco central', 'success');
+                            this.renderActionButtons();
+                            this.render();
+                        } else {
+                            this.submissionStatus = 'error';
+                            const msg = event.data.message || '';
+                            if (msg.includes('Sessão expirada') || msg.includes('Authentication')) {
+                                this.showModal('Sessão Expirada', 'Sua sessão expirou por inatividade. Clique em OK para fazer login novamente.', () => this.logout());
+                            } else {
+                                this.showToast('✕ Falha ao emitir relatório: ' + msg, 'error');
+                            }
+                            this.renderActionButtons();
+                        }
+                    }
+                    else if (event.data.type === 'firecheck-resolver-nc-result') {
+                        if (event.data.success) {
+                            this.showToast('✓ ' + event.data.message, 'success');
+                            if (this.relatorioDetalhe) {
+                                this.verRelatorioDetalhe(this.relatorioDetalhe.id);
+                            }
+                        } else {
+                            this.showToast('✕ ' + event.data.message, 'error');
+                        }
+                    }
+                    else if (event.data.type === 'firecheck-consultar-relatorios-result') {
+                        this.relatoriosLoading = false;
+                        if (event.data.success) {
+                            this.relatorios = event.data.relatorios || [];
+                            this.showToast('✓ ' + (event.data.total || 0) + ' relatório(s) encontrado(s)', 'success');
+                        } else {
+                            this.relatorios = [];
+                            const msg = event.data.message || '';
+                            if (msg.includes('Sessão expirada') || msg.includes('Authentication')) {
+                                this.showModal('Sessão Expirada', 'Sua sessão expirou. Clique em OK para fazer login novamente.', () => this.logout());
+                            } else {
+                                this.showToast('✕ Erro na consulta: ' + msg, 'error');
+                            }
+                        }
+                        if (this.currentModule === 'relatorios') this.render();
+                    }
+                    else if (event.data.type === 'firecheck-buscar-relatorio-result') {
+                        if (event.data.success) {
+                            this.relatorioDetalhe = event.data.relatorio;
+                            this.registrarAuditoria('visualizacao', event.data.relatorio.id, event.data.relatorio.numero, 'Visualização detalhada do relatório');
+                            if (this.currentModule === 'relatorios') this.render();
+                        } else {
+                            this.showToast('✕ Relatório não encontrado: ' + (event.data.message || ''), 'error');
+                        }
+                    }
+                    // Resultado do auto-save na nuvem
+                    else if (event.data.type === 'firecheck-save-vistoria-result') {
+                        if (event.data.success) {
+                            this.currentVistoriaId = event.data.vistoria_id;
+                            this.setSyncStatus('saved');
+                        } else {
+                            this.setSyncStatus('error');
+                            const msg = event.data.message || '';
+                            if (msg.includes('Sessão expirada') || msg.includes('Authentication')) {
+                                this.showModal('Sessão Expirada', 'Sua sessão expirou. Clique em OK para fazer login novamente.', () => this.logout());
+                            }
+                        }
+                    }
+                    // Resultado do carregamento da vistoria
+                    else if (event.data.type === 'firecheck-load-vistoria-result') {
+                        this._cloudSaveSuspended = false;
+                        if (event.data.success && event.data.vistoria) {
+                            this.currentVistoriaId = event.data.vistoria.id;
+                            this.hydrateFromVistoria(event.data.vistoria, event.data.modulo);
+                        } else {
+                            this.currentVistoriaId = null;
+                        }
+                        if (this.currentModule === event.data.modulo) this.render();
+                    }
+                    // Resultado da listagem para o Gerenciador
+                    else if (event.data.type === 'firecheck-list-vistorias-result') {
+                        if (event.data.success) {
+                            this.allVistorias = event.data.vistorias || [];
+                        }
+                        if (this.currentModule === 'manager') this.render();
+                    }
+                    // Mudança em tempo real (outro usuário salvou)
+                    else if (event.data.type === 'firecheck-vistoria-changed') {
+                        const v = event.data.vistoria;
+                        if (!v) return;
+                        const activeEl = document.activeElement;
+                        const isTyping = activeEl && ['INPUT','TEXTAREA','SELECT'].includes(activeEl.tagName);
+                        if (isTyping) return; // não interromper edição ativa
+                        if (v.modulo === this.currentModule && v.status === 'em_andamento') {
+                            const equipModulos = ['it22', 'it19', 'it21', 'pcf', 'saida'];
+                            if (equipModulos.includes(v.modulo)) {
+                                const changedCode = v.equipamento_id || (v.selectedHydrant?.code || '');
+                                const currentCode = this.getEquipamentoIdForModule(v.modulo);
+                                if (changedCode && currentCode && changedCode !== currentCode) return;
+                            }
+                            this.currentVistoriaId = v.id;
+                            this.hydrateFromVistoria(v, v.modulo);
+                            this.render();
+                        }
+                        if (this.currentModule === 'manager' || this.currentModule === 'dashboard') {
+                            this.loadAllVistorias();
+                        }
+                    }
+                });
+                
+                // Roteamento: back button nativo/gesture via popstate
+                window.addEventListener('popstate', (e) => {
+                    const hash = (window.location.hash || '').replace('#', '');
+                    const target = CONFIG.modules.find(m => m.id === hash);
+                    if (target) {
+                        this.navigateTo(hash, true);
+                    } else if (this.currentUser) {
+                        const allowed = CONFIG.permissions[this.currentUser.nivel] || [];
+                        const fallback = allowed.includes('dashboard') ? 'dashboard' : allowed[0];
+                        this.navigateTo(fallback, true);
+                    }
+                });
+                
+                const sessionUser = sessionStorage.getItem('FireCheckSession');
+                if (sessionUser) {
+                    try {
+                        this.currentUser = JSON.parse(sessionUser);
+                        this.initApp();
+                    } catch(e) {
+                        this.renderLogin();
+                    }
+                } else {
+                    this.renderLogin();
+                }
+            }
+
+            // Persistência em LocalStorage
+            loadState() {
+                const defaultState = {
+                    header: { proprietario: '', respTecnico: '', data: new Date().toISOString().split('T')[0] },
+                    answers: {}, justifications: {}, it16: {}, it21: [],
+                    rnc: [], aph: [], kittrauma: { checks: {}, historico: [] },
+                    selectedHydrant: { block: '', code: '' },
+                    selectedEquipamento: {}, storedData: {}
+                };
+                try {
+                    const saved = localStorage.getItem('FireCheckData_v21');
+                    if (!saved) return defaultState;
+                    const p = JSON.parse(saved);
+                    // Checklists vêm da nuvem; apenas RNC/APH/KitTrauma permanecem no localStorage
+                    return { ...defaultState, rnc: p.rnc||[], aph: p.aph||[], kittrauma: p.kittrauma||{checks:{},historico:[]} };
+                } catch(e) { return defaultState; }
+            }
+
+            loadUsers() {
+                const defaultAdmin = {
+                    matricula: 'CILOIMREA',
+                    senha: 'CILO@2026', 
+                    nome: 'Administrador CILO',
+                    nivel: 'CILO',
+                    setor: 'Administração Geral',
+                    funcao: 'Gestor de Segurança',
+                    aprovado: true,
+                    resetRequested: false
+                };
+                try {
+                    const saved = localStorage.getItem('FireCheckUsers_v21');
+                    let users = saved ? JSON.parse(saved) : [];
+                    const existingIdx = users.findIndex(u => u.matricula === 'CILOIMREA');
+                    if (existingIdx === -1) {
+                        users.push(defaultAdmin);
+                    } else {
+                        // Garante que o admin principal sempre tenha a senha padrão e esteja aprovado
+                        users[existingIdx].senha = 'CILO@2026';
+                        users[existingIdx].aprovado = true;
+                        users[existingIdx].resetRequested = false;
+                    }
+                    return users;
+                } catch(e) { return [defaultAdmin]; }
+            }
+
+            saveState() {
+                // Apenas RNC/APH/KitTrauma no localStorage; checklists vão para a nuvem
+                const localData = { rnc: this.state.rnc, aph: this.state.aph, kittrauma: this.state.kittrauma };
+                try { localStorage.setItem('FireCheckData_v21', JSON.stringify(localData)); }
+                catch (e) { this.showModal('Erro de Armazenamento', 'Limite do navegador atingido. Reduza fotos do RNC.'); }
+                this.scheduleCloudSave();
+            }
+
+            saveUsers() { localStorage.setItem('FireCheckUsers_v21', JSON.stringify(this.users)); }
+
+            // --- SINCRONIZAÇÃO NA NUVEM (CHECKLISTS) ---
+            scheduleCloudSave() {
+                if (this._cloudSaveSuspended) return;
+                const modId = this.currentModule;
+                const modConfig = CONFIG.modules.find(m => m.id === modId);
+                if (!modConfig || !['checklist','form','extinguisher'].includes(modConfig.type)) return;
+                if (this._cloudSaveTimer) clearTimeout(this._cloudSaveTimer);
+                this.setSyncStatus('saving');
+                this._cloudSaveTimer = setTimeout(() => this._doCloudSave(), 1000);
+            }
+
+            flushCloudSave() {
+                if (this._cloudSaveTimer) { clearTimeout(this._cloudSaveTimer); this._cloudSaveTimer = null; }
+                this._doCloudSave();
+            }
+
+            _doCloudSave() {
+                const modId = this.currentModule;
+                const equipamento_id = this.getEquipamentoIdForModule(modId);
+                window.parent.postMessage({ type: 'firecheck-save-vistoria', payload: {
+                    modulo: modId, equipamento_id, status: 'em_andamento',
+                    header: this.state.header, answers: this.state.answers,
+                    justifications: this.state.justifications, selectedHydrant: this.state.selectedHydrant,
+                    selectedEquipamento: this.state.selectedEquipamento,
+                    it16: this.state.it16, it21: this.state.it21,
+                    operador: this.currentUser?.nome||'', operador_id: this.currentUser?.matricula||'',
+                    operador_perfil: this.currentUser?.nivel||''
+                }}, '*');
+            }
+
+            loadVistoriaFromCloud(modId) {
+                const equipamento_id = this.getEquipamentoIdForModule(modId);
+                this._cloudSaveSuspended = true;
+                window.parent.postMessage({ type: 'firecheck-load-vistoria', modulo: modId, equipamento_id }, '*');
+            }
+
+            loadAllVistorias() {
+                window.parent.postMessage({ type: 'firecheck-list-vistorias' }, '*');
+            }
+
+            hydrateFromVistoria(v, modId) {
+                if (v.header) this.state.header = v.header;
+                // Limpa respostas do módulo e reidrata com dados da nuvem
+                Object.keys(this.state.answers).forEach(k => { if (k.startsWith(modId + '-')) delete this.state.answers[k]; });
+                if (v.answers) Object.keys(v.answers).forEach(k => { if (k.startsWith(modId + '-')) this.state.answers[k] = v.answers[k]; });
+                if (v.justifications) this.state.justifications[modId] = v.justifications[modId] || [];
+                if (v.selectedHydrant && modId === 'it22') this.state.selectedHydrant = v.selectedHydrant;
+                if (v.selectedEquipamento && v.selectedEquipamento[modId]) {
+                    if (!this.state.selectedEquipamento) this.state.selectedEquipamento = {};
+                    this.state.selectedEquipamento[modId] = v.selectedEquipamento[modId];
+                    if (modId === 'it22' && v.selectedEquipamento[modId].codigo) {
+                        this.state.selectedHydrant = this.state.selectedHydrant || {block:'',code:''};
+                        this.state.selectedHydrant.code = v.selectedEquipamento[modId].codigo;
+                    }
+                } else if (v.equipamento_id && modId !== 'it22') {
+                    if (!this.state.selectedEquipamento) this.state.selectedEquipamento = {};
+                    this.state.selectedEquipamento[modId] = { codigo: v.equipamento_id };
+                }
+                if (v.it16 && modId === 'it16') this.state.it16 = v.it16;
+                if (v.it21 && modId === 'it21') this.state.it21 = v.it21;
+            }
+
+            setSyncStatus(status) {
+                this._syncStatus = status;
+                const el = document.getElementById('save-status');
+                if (!el) return;
+                const cfg = {
+                    saving: { t: 'Salvando na nuvem...', c: 'text-amber-600', b: 'bg-amber-50', bo: 'border-amber-200', i: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.582m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>', s: 'animate-spin', o: 'opacity-100' },
+                    saved: { t: 'Salvo na nuvem', c: 'text-emerald-600', b: 'bg-emerald-50', bo: 'border-emerald-200', i: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>', s: '', o: 'opacity-100' },
+                    error: { t: 'Erro de sincronização', c: 'text-red-600', b: 'bg-red-50', bo: 'border-red-200', i: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>', s: '', o: 'opacity-100' },
+                    idle: { t: 'Salvo Automaticamente', c: 'text-emerald-600', b: 'bg-emerald-50', bo: 'border-emerald-200', i: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>', s: '', o: 'opacity-0' }
+                }[status] || { t:'', c:'', b:'', bo:'', i:'', s:'', o:'opacity-0' };
+                el.className = `text-xs font-medium ${cfg.c} flex items-center gap-1.5 transition-opacity ${cfg.b} px-2.5 py-1 rounded-full border ${cfg.bo} ${cfg.o}`;
+                el.innerHTML = `<svg class="w-3.5 h-3.5 ${cfg.s}" fill="none" stroke="currentColor" viewBox="0 0 24 24">${cfg.i}</svg><span>${cfg.t}</span>`;
+                if (status === 'saved') setTimeout(() => { if (this._syncStatus === 'saved') el.classList.add('opacity-0'); }, 2000);
+            }
+
+            // Feedback por Toast
+            showToast(message, type = 'success') {
+                const container = document.getElementById('toast-container');
+                if(!container) return;
+                const toast = document.createElement('div');
+                const bgColor = type === 'success' ? 'bg-slate-900 text-white' : 'bg-red-600 text-white';
+                toast.className = `${bgColor} text-xs font-semibold px-4 py-3 rounded-xl shadow-xl border border-white/10 flex items-center gap-2 transform transition-all duration-300 translate-y-2 pointer-events-auto`;
+                toast.innerHTML = `<span>${message}</span>`;
+                container.appendChild(toast);
+                setTimeout(() => toast.classList.remove('translate-y-2'), 10);
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+
+            // Substituição customizada para alert() e confirm()
+            showModal(title, message, onConfirm = null) {
+                const overlay = document.getElementById('modal-overlay');
+                const titleEl = document.getElementById('modal-title');
+                const msgEl = document.getElementById('modal-message');
+                const actionsEl = document.getElementById('modal-actions');
+
+                titleEl.innerText = title;
+                msgEl.innerText = message;
+
+                if (onConfirm) {
+                    actionsEl.innerHTML = `
+                        <button id="modal-cancel-btn" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
+                        <button id="modal-confirm-btn" class="px-4 py-2 text-xs font-bold text-white bg-fire-600 hover:bg-fire-700 rounded-lg shadow-md transition-all">Confirmar</button>
+                    `;
+                    document.getElementById('modal-cancel-btn').onclick = () => overlay.classList.add('hidden');
+                    document.getElementById('modal-confirm-btn').onclick = () => {
+                        overlay.classList.add('hidden');
+                        onConfirm();
+                    };
+                } else {
+                    actionsEl.innerHTML = `
+                        <button id="modal-ok-btn" class="px-5 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-md transition-all">OK</button>
+                    `;
+                    document.getElementById('modal-ok-btn').onclick = () => overlay.classList.add('hidden');
+                }
+                overlay.classList.remove('hidden');
+            }
+
+            // LOGICA DE PERSISTENCIA EM SILO - delega para o módulo equipment-selector
+            updateHydrantSelection(field, val) {
+                if (field === 'code') {
+                    this.updateEquipamentoSelection('it22', val);
+                } else if (field === 'block') {
+                    // Apenas re-renderiza (o seletor agora é um dropdown único)
+                    this.render();
+                }
+            }
+
+            updateHeader(field, val) { 
+                this.state.header[field] = val; 
+                this.saveState(); 
+            }
+
+            setAnswer(key, val) { 
+                this.state.answers[key] = val; 
+                if (val === 'nc' || val === 'nao') { 
+                    const [modId, itemId] = key.split('-'); 
+                    this.addJustification(modId, itemId); 
+                } 
+                this.saveState(); 
+                this.render(); 
+            }
+
+            addJustification(modId, itemId = '') { 
+                if (!this.state.justifications[modId]) this.state.justifications[modId] = []; 
+                if (itemId && this.state.justifications[modId].find(j => j.item === itemId)) return; 
+                this.state.justifications[modId].push({ item: itemId, text: '' }); 
+                this.saveState(); 
+                this.render(); 
+            }
+
+            updateJustification(modId, idx, field, val) { 
+                if (this.state.justifications[modId] && this.state.justifications[modId][idx]) {
+                    this.state.justifications[modId][idx][field] = val; 
+                    this.saveState(); 
+                }
+            }
+
+            removeJustification(modId, idx) { 
+                this.showModal('Remover Item', 'Deseja remover esta justificativa?', () => {
+                    this.state.justifications[modId].splice(idx, 1); 
+                    this.saveState(); 
+                    this.render(); 
+                });
+            }
+
+            updateIT16(field, val) { 
+                this.state.it16[field] = val; 
+                this.saveState(); 
+            }
+
+            addExtinguisher() { 
+                const loc = document.getElementById('ext-loc').value; 
+                const id = document.getElementById('ext-id').value; 
+                const type = document.getElementById('ext-type').value; 
+                const status = document.getElementById('ext-status').value; 
+                if (!loc || !id) return this.showModal('Aviso', 'Preencha a Localização e a Identificação do extintor.'); 
+                
+                this.state.it21.push({ loc, id, type, status }); 
+                this.saveState(); 
+                this.showToast('Extintor registrado!');
+                this.render(); 
+            }
+
+            removeExtinguisher(idx) { 
+                this.showModal('Excluir Extintor', 'Tem certeza que deseja remover este extintor?', () => {
+                    this.state.it21.splice(idx, 1); 
+                    this.saveState(); 
+                    this.render(); 
+                });
+            }
+
+            // PROCESSAMENTO DE IMAGENS CLIENT-SIDE (Canvas resize 800px max, JPEG 0.7)
+            processImage(file, callback) { 
+                const reader = new FileReader(); 
+                reader.onload = (e) => { 
+                    const img = new Image(); 
+                    img.onload = () => { 
+                        const canvas = document.createElement('canvas'); 
+                        const ctx = canvas.getContext('2d'); 
+                        const maxWidth = 800; 
+                        const maxHeight = 600; 
+                        let width = img.width; 
+                        let height = img.height; 
+                        
+                        if (width > height) { 
+                            if (width > maxWidth) { 
+                                height *= maxWidth / width; 
+                                width = maxWidth; 
+                            } 
+                        } else { 
+                            if (height > maxHeight) { 
+                                width *= maxHeight / height; 
+                                height = maxHeight; 
+                            } 
+                        } 
+                        canvas.width = width; 
+                        canvas.height = height; 
+                        ctx.drawImage(img, 0, 0, width, height); 
+                        callback(canvas.toDataURL('image/jpeg', 0.7)); 
+                    }; 
+                    img.src = e.target.result; 
+                }; 
+                reader.readAsDataURL(file); 
+            }
+
+            addRNC() { 
+                const sys = document.getElementById('rnc-system').value; 
+                const risk = document.getElementById('rnc-risk').value; 
+                const loc = document.getElementById('rnc-loc').value; 
+                const desc = document.getElementById('rnc-desc').value; 
+                const fileInput = document.getElementById('rnc-photo'); 
+                
+                if(!desc || !loc) return this.showModal('Campos Obrigatórios', 'Por favor, informe a localização e descreva a falha encontrada.'); 
+
+                const saveItem = (base64Image) => { 
+                    this.state.rnc.push({ 
+                        id: Date.now(), 
+                        sys, 
+                        risk, 
+                        loc, 
+                        desc, 
+                        img: base64Image,
+                        author: this.currentUser ? this.currentUser.nome : 'Anônimo',
+                        date: new Date().toLocaleDateString('pt-BR')
+                    }); 
+                    this.saveState(); 
+                    this.showToast('Não conformidade registrada!');
+                    this.render(); 
+                }; 
+
+                if (fileInput && fileInput.files && fileInput.files[0]) { 
+                    this.processImage(fileInput.files[0], saveItem); 
+                } else { 
+                    saveItem(null); 
+                } 
+            }
+
+            removeRNC(id) { 
+                this.showModal('Excluir Ocorrência', 'Deseja excluir esta não conformidade?', () => {
+                    this.state.rnc = this.state.rnc.filter(i => i.id !== id); 
+                    this.saveState(); 
+                    this.render(); 
+                });
+            }
+
+            // --- MÓDULO APH (Atendimento Pré-Hospitalar) ---
+            addAPH() {
+                const getVal = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+                
+                const dataAcionamento = getVal('aph-data');
+                const meioAcionamento = getVal('aph-meio');
+                const tipoApoio = getVal('aph-tipo');
+                const avalPrimaria = getVal('aph-aval');
+                const glasgow = getVal('aph-glasgow');
+                const pa = getVal('aph-pa');
+                const fc = getVal('aph-fc');
+                const fr = getVal('aph-fr');
+                const spo2 = getVal('aph-spo2');
+                const temp = getVal('aph-temp');
+                const destino = getVal('aph-destino');
+                const obs = getVal('aph-obs');
+                
+                if (!dataAcionamento || !tipoApoio) return this.showModal('Campos Obrigatórios', 'Preencha o momento do acionamento e o tipo de apoio prestado.');
+                
+                this.state.aph.push({
+                    id: Date.now(),
+                    dataAcionamento, meioAcionamento, tipoApoio, avalPrimaria,
+                    glasgow, pa, fc, fr, spo2, temp, destino, obs,
+                    author: this.currentUser ? this.currentUser.nome : 'Anônimo',
+                    date: new Date().toLocaleDateString('pt-BR')
+                });
+                this.saveState();
+                this.showToast('Relatório APH registrado com sucesso!');
+                this.render();
+            }
+
+            removeAPH(id) {
+                this.showModal('Excluir Relatório APH', 'Deseja excluir este relatório de atendimento pré-hospitalar?', () => {
+                    this.state.aph = this.state.aph.filter(i => i.id !== id);
+                    this.saveState();
+                    this.render();
+                });
+            }
+
+            renderAPH() {
+                let html = `
+                <div class="no-print bg-slate-50 border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-fire-600"></span> Registrar Ocorrência APH
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Momento do Acionamento *</label>
+                            <input id="aph-data" type="datetime-local" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Meio de Acionamento</label>
+                            <select id="aph-meio" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800">
+                                <option value="Telefone">Telefone</option>
+                                <option value="Rádio">Rádio</option>
+                                <option value="Aplicativo">Aplicativo</option>
+                                <option value="Pessoalmente">Pessoalmente</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tipo de Apoio Prestado *</label>
+                            <select id="aph-tipo" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800 font-medium">
+                                <option value="Avaliação e Estabilização">Avaliação e Estabilização no Local</option>
+                                <option value="Transporte com Suporte Básico">Transporte com Suporte Básico (USB)</option>
+                                <option value="Transporte com Suporte Avançado">Transporte com Suporte Avançado (USA)</option>
+                                <option value="Resgate e Remoção">Resgate e Remoção</option>
+                                <option value="Atendimento e Alta no Local">Atendimento e Alta no Local</option>
+                                <option value="Suporte a Outra Equipe">Suporte a Outra Equipe</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Avaliação Primária (ABCDE)</label>
+                            <textarea id="aph-aval" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none h-20 resize-none" placeholder="Descreva vias aéreas, respiração, circulação, déficit neurológico, exposição..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-5 mb-3 border-t border-slate-200 pt-4">Sinais Vitais e Escala de Glasgow</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Glasgow (3-15)</label>
+                            <input id="aph-glasgow" type="number" min="3" max="15" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs text-center font-mono font-bold outline-none focus:border-slate-800" placeholder="15">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">PA (mmHg)</label>
+                            <input id="aph-pa" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs text-center font-mono font-bold outline-none focus:border-slate-800" placeholder="120x80">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">FC (bpm)</label>
+                            <input id="aph-fc" type="number" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs text-center font-mono font-bold outline-none focus:border-slate-800" placeholder="80">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">FR (irpm)</label>
+                            <input id="aph-fr" type="number" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs text-center font-mono font-bold outline-none focus:border-slate-800" placeholder="16">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">SpO₂ (%)</label>
+                            <input id="aph-spo2" type="number" min="0" max="100" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs text-center font-mono font-bold outline-none focus:border-slate-800" placeholder="98">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Temp (°C)</label>
+                            <input id="aph-temp" type="number" step="0.1" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs text-center font-mono font-bold outline-none focus:border-slate-800" placeholder="36.5">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Destino do Paciente</label>
+                            <select id="aph-destino" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs font-medium outline-none focus:border-slate-800">
+                                <option value="Hospital de Referência">Hospital de Referência</option>
+                                <option value="UPA">UPA</option>
+                                <option value="Pronto Socorro">Pronto Socorro</option>
+                                <option value="Alta no Local">Alta no Local</option>
+                                <option value="Recusa de Transporte">Recusa de Transporte</option>
+                                <option value="Óbito no Local">Óbito no Local</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Observações Complementares</label>
+                        <textarea id="aph-obs" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none h-16 resize-none" placeholder="Condutas adotadas, medicações, intercorrências..."></textarea>
+                    </div>
+                    
+                    <button onclick="app.addAPH()" class="mt-4 w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors text-xs uppercase tracking-wider">
+                        Gravar Relatório APH
+                    </button>
+                </div>`;
+
+                html += `<div class="space-y-6">`;
+                if (this.state.aph.length === 0) {
+                    html += `<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-xl border border-slate-200">Nenhum relatório APH registrado.</div>`;
+                } else {
+                    this.state.aph.forEach((item, idx) => {
+                        html += `
+                        <div class="border border-slate-200 rounded-xl overflow-hidden avoid-break print:border-black shadow-sm bg-white">
+                            <div class="bg-slate-50 p-3 border-b border-slate-200 flex justify-between items-center">
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-slate-900 text-white text-[9px] font-mono px-2 py-0.5 rounded font-bold">APH #${idx + 1}</span>
+                                    <span class="font-bold text-xs uppercase text-slate-800">${item.tipoApoio}</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-[10px] font-mono text-slate-500">${item.date}</span>
+                                    <button onclick="app.removeAPH(${item.id})" class="no-print text-slate-400 hover:text-fire-600 transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="p-4 space-y-3">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                    <div>
+                                        <span class="text-[9px] text-slate-400 uppercase font-bold block">Acionamento</span>
+                                        <div class="font-semibold text-slate-800">${item.dataAcionamento ? new Date(item.dataAcionamento).toLocaleString('pt-BR') : 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span class="text-[9px] text-slate-400 uppercase font-bold block">Meio</span>
+                                        <div class="font-semibold text-slate-800">${item.meioAcionamento || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span class="text-[9px] text-slate-400 uppercase font-bold block">Destino</span>
+                                        <div class="font-semibold text-slate-800">${item.destino || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span class="text-[9px] text-slate-400 uppercase font-bold block">Operador</span>
+                                        <div class="font-semibold text-slate-800">${item.author || 'N/A'}</div>
+                                    </div>
+                                </div>
+                                ${item.avalPrimaria ? `<div><span class="text-[9px] text-slate-400 uppercase font-bold block">Avaliação Primária</span><div class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded border border-slate-100">${item.avalPrimaria}</div></div>` : ''}
+                                <div class="grid grid-cols-3 md:grid-cols-7 gap-2 text-center">
+                                    ${item.glasgow ? `<div class="bg-slate-50 rounded p-2"><span class="text-[8px] text-slate-400 uppercase font-bold block">Glasgow</span><span class="font-mono font-bold text-sm text-slate-800">${item.glasgow}</span></div>` : ''}
+                                    ${item.pa ? `<div class="bg-slate-50 rounded p-2"><span class="text-[8px] text-slate-400 uppercase font-bold block">PA</span><span class="font-mono font-bold text-sm text-slate-800">${item.pa}</span></div>` : ''}
+                                    ${item.fc ? `<div class="bg-slate-50 rounded p-2"><span class="text-[8px] text-slate-400 uppercase font-bold block">FC</span><span class="font-mono font-bold text-sm text-slate-800">${item.fc}</span></div>` : ''}
+                                    ${item.fr ? `<div class="bg-slate-50 rounded p-2"><span class="text-[8px] text-slate-400 uppercase font-bold block">FR</span><span class="font-mono font-bold text-sm text-slate-800">${item.fr}</span></div>` : ''}
+                                    ${item.spo2 ? `<div class="bg-slate-50 rounded p-2"><span class="text-[8px] text-slate-400 uppercase font-bold block">SpO₂</span><span class="font-mono font-bold text-sm text-slate-800">${item.spo2}%</span></div>` : ''}
+                                    ${item.temp ? `<div class="bg-slate-50 rounded p-2"><span class="text-[8px] text-slate-400 uppercase font-bold block">Temp</span><span class="font-mono font-bold text-sm text-slate-800">${item.temp}°C</span></div>` : ''}
+                                </div>
+                                ${item.obs ? `<div><span class="text-[9px] text-slate-400 uppercase font-bold block">Observações</span><div class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded border border-slate-100">${item.obs}</div></div>` : ''}
+                            </div>
+                        </div>`;
+                    });
+                }
+                html += `</div>`;
+                return html;
+            }
+
+            // TRAVA DE SEGURANÇA E VALIDAÇÃO DE ENVIO
+            confirmSubmission() {
+                if (this.currentModule === 'kittrauma') return this.ktSalvarVerificacao();
+                const modId = this.currentModule;
+                const modConfig = CONFIG.modules.find(m => m.id === modId);
+                
+                // Validação para Checklists
+                if (modConfig && modConfig.type === 'checklist') {
+                    const justs = this.state.justifications[modId] || [];
+                    const answers = this.state.answers;
+                    const missing = [];
+
+                    Object.keys(answers).forEach(key => {
+                        if (key.startsWith(modId + '-')) {
+                            const val = answers[key];
+                            if (val === 'nao' || val === 'nc') {
+                                const itemId = key.split('-')[1];
+                                const hasJustification = justs.some(j => j.item === itemId && j.text && j.text.trim().length > 0);
+                                if (!hasJustification) missing.push(itemId);
+                            }
+                        }
+                    });
+
+                    if (missing.length > 0) {
+                        return this.showModal(
+                            'Bloqueio de Envio - Justificativa Pendente', 
+                            `Para garantir a qualidade da vistoria, é obrigatório preencher a justificativa para todos os itens marcados como NÃO ou NC. Item(ns) pendente(s): ${missing.join(', ')}.`
+                        );
+                    }
+                }
+                
+                // Validação de seleção de equipamento (IT-22, IT-19, IT-21, PCF, Saída)
+                const equipModulos = ['it22', 'it19', 'it21', 'pcf', 'saida'];
+                if (equipModulos.includes(modId)) {
+                    const cod = this.getEquipamentoIdForModule(modId);
+                    if (!cod) {
+                        return this.showModal('Validação Pendente', 'Por favor, selecione o Código do Equipamento avaliado antes de prosseguir.');
+                    }
+                    this.flushCloudSave();
+                }
+
+                // Resetar estado e disparar envio ao banco
+                this.submissionConfirmed = false;
+                this.submissionStatus = 'sending';
+                this.renderActionButtons();
+                this.sendToGoogleSheets();
+            }
+
+            printReport() {
+                if (!this.submissionConfirmed) {
+                    return this.showModal('Envio Pendente', 'Você deve confirmar e enviar o relatório para o banco de dados antes de imprimir. Clique no botão "Confirmar e Enviar" primeiro.');
+                }
+                window.print();
+            }
+
+            renderActionButtons() {
+                const actionContainer = document.getElementById('action-buttons');
+                if (!actionContainer) return;
+                actionContainer.innerHTML = '';
+                const mod = CONFIG.modules.find(m => m.id === this.currentModule);
+                if (!mod || !['checklist', 'form', 'extinguisher', 'rnc', 'aph', 'kittrauma'].includes(mod.type)) return;
+                
+                const printDisabled = !this.submissionConfirmed;
+                const printClass = printDisabled 
+                    ? 'flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-400 bg-slate-200 rounded-lg cursor-not-allowed'
+                    : 'flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-md hover:shadow-lg transition-all transform active:scale-95';
+                const printAttr = printDisabled ? 'disabled' : 'onclick="app.printReport()"';
+                const printLabel = this.submissionStatus === 'sending' ? 'Enviando...' : (printDisabled ? 'Imprimir (bloqueado)' : 'Imprimir');
+                const sendLabel = this.submissionStatus === 'sending' ? 'Enviando...' : (this.submissionStatus === 'success' ? 'Reenviar' : 'Confirmar e Enviar');
+                
+                actionContainer.innerHTML = `
+                    <button onclick="app.resetForm()" title="Limpar dados" class="px-3 py-2 text-xs font-bold text-slate-600 hover:text-red-600 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        Limpar
+                    </button>
+                    <button onclick="app.confirmSubmission()" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-fire-700 hover:bg-fire-800 rounded-lg shadow-md hover:shadow-lg transition-all transform active:scale-95">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        ${sendLabel}
+                    </button>
+                    <button ${printAttr} class="${printClass}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        ${printLabel}
+                    </button>
+                `;
+            }
+
+            sendToGoogleSheets() {
+                const modId = this.currentModule;
+                const modConfig = CONFIG.modules.find(m => m.id === modId);
+                if (!modConfig) return;
+
+                const header = this.state.header;
+                let itensAvaliados = 0, conformes = 0, naoConformes = 0;
+                let justificativasText = '';
+                let equipamento = '';
+
+                if (modConfig.type === 'checklist') {
+                    Object.keys(this.state.answers).forEach(key => {
+                        if (key.startsWith(modId + '-')) {
+                            itensAvaliados++;
+                            if (this.state.answers[key] === 'sim') conformes++;
+                            else naoConformes++;
+                        }
+                    });
+                    justificativasText = (this.state.justifications[modId] || [])
+                        .map(j => `[${j.item}] ${j.text}`).join(' | ');
+                    const codEquip = this.getEquipamentoIdForModule(modId);
+                    if (codEquip) {
+                        const descEquip = this.getEquipamentoLabelForModule(modId);
+                        equipamento = descEquip ? `${codEquip} - ${descEquip}` : codEquip;
+                    }
+                } else if (modId === 'it21') {
+                    itensAvaliados = this.state.it21.length;
+                    conformes = this.state.it21.filter(e => e.status === 'OK').length;
+                    naoConformes = itensAvaliados - conformes;
+                    equipamento = this.state.it21.map(e => `${e.id} (${e.type}) @ ${e.loc}: ${e.status}`).join(' | ');
+                } else if (modId === 'it16') {
+                    const d = this.state.it16;
+                    equipamento = Object.entries(d).map(([k, v]) => `${k}: ${v}`).join(' | ');
+                } else if (modId === 'aph') {
+                    itensAvaliados = this.state.aph.length;
+                    equipamento = this.state.aph.map(a => `APH: ${a.tipoApoio} | Destino: ${a.destino} | Glasgow: ${a.glasgow || 'N/A'} | PA: ${a.pa || 'N/A'} | FC: ${a.fc || 'N/A'} | FR: ${a.fr || 'N/A'} | SpO2: ${a.spo2 || 'N/A'}% | Temp: ${a.temp || 'N/A'}C`).join(' || ');
+                } else if (modId === 'kittrauma') {
+                    const unitId = this._ktUnit || KIT_UNITS[0].id;
+                    const checks = (this.state.kittrauma?.checks || {})[unitId] || {};
+                    let ok=0, nok=0;
+                    ['ext','bolsa','parto'].forEach(sec => {
+                        const arr = sec==='ext'?KIT_EXTERNO:sec==='bolsa'?KIT_BOLSA:KIT_PARTO;
+                        arr.forEach((_,idx) => { const s = (checks[`${sec}-${idx}`]||{}).status; if(s==='OK')ok++; else if(s)nok++; });
+                    });
+                    itensAvaliados = ok+nok; conformes = ok; naoConformes = nok;
+                    equipamento = KIT_UNITS.find(u=>u.id===unitId)?.label || unitId;
+                }
+
+                const rncsText = (this.state.rnc || [])
+                    .map(r => `${r.sys} (${r.risk}): ${r.loc} - ${r.desc}`).join(' | ');
+
+                const payload = {
+                    modulo: modConfig.title,
+                    norma: modConfig.subtitle,
+                    respTecnico: header.respTecnico,
+                    proprietario: header.proprietario,
+                    equipamento,
+                    itensAvaliados,
+                    conformes,
+                    naoConformes,
+                    justificativas: justificativasText,
+                    rncs: rncsText,
+                    operador: this.currentUser ? this.currentUser.nome : ''
+                };
+
+                window.parent.postMessage({ type: 'firecheck-vistoria', payload }, '*');
+                this.showToast('Enviando dados para o banco central...', 'success');
+
+                // Emitir relatório numerado no banco centralizado
+                const dbPayload = {
+                    modulo: modId, modulo_titulo: modConfig.title, norma: modConfig.subtitle,
+                    resp_tecnico: header.respTecnico, proprietario: header.proprietario,
+                    equipamento, itens_avaliados: itensAvaliados, conformes, nao_conformes: naoConformes,
+                    justificativas: justificativasText, rncs: rncsText,
+                    operador: this.currentUser ? this.currentUser.nome : '',
+                    operador_id: this.currentUser ? this.currentUser.matricula : '',
+                    operador_perfil: this.currentUser ? this.currentUser.nivel : '',
+                    checklist_data: this.buildChecklistSnapshot(modId),
+                    vistoria_id: this.currentVistoriaId || ''
+                };
+                window.parent.postMessage({ type: 'firecheck-emitir-relatorio', payload: dbPayload }, '*');
+            }
+
+            resetForm() {
+                this.showModal('Limpar Dados', 'Deseja realmente limpar todos os dados preenchidos no módulo atual?', () => {
+                    if (this.currentModule === 'it16') this.state.it16 = {};
+                    else if (this.currentModule === 'rnc') this.state.rnc = [];
+                    else if (this.currentModule === 'it21') this.state.it21 = [];
+                    else if (this.currentModule === 'aph') this.state.aph = [];
+                    else if (this.currentModule === 'kittrauma') { this.state.kittrauma = { checks: {}, historico: [] }; }
+                    else {
+                        Object.keys(this.state.answers).forEach(k => {
+                            if(k.startsWith(this.currentModule)) delete this.state.answers[k];
+                        });
+                        this.state.justifications[this.currentModule] = [];
+                    }
+                    this.saveState();
+                    this.render();
+                    this.showToast('Módulo resetado com sucesso.');
+                });
+            }
+
+            // --- AUTENTICAÇÃO E CADASTRO DE USUÁRIOS ---
+            renderLogin() {
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('main-sidebar').classList.add('hidden');
+                document.getElementById('main-panel').classList.add('hidden');
+                
+                const container = document.getElementById('auth-forms');
+                container.innerHTML = `
+                    <h2 class="text-2xl font-black mb-1 text-slate-800 tracking-tight">Acesso ao Sistema</h2>
+                    <p class="text-xs text-slate-500 mb-6">Informe suas credenciais para entrar na plataforma.</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Matrícula ou Usuário</label>
+                            <input id="login-id" type="text" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-fire-600 focus:ring-2 focus:ring-fire-600/20 transition-all font-medium text-sm" placeholder="Ex: CILOIMREA">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Senha</label>
+                            <input id="login-pass" type="password" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-fire-600 focus:ring-2 focus:ring-fire-600/20 transition-all font-medium text-sm" placeholder="••••••••">
+                        </div>
+                        <button onclick="app.login()" class="w-full bg-fire-700 hover:bg-fire-800 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-fire-700/20 transform active:scale-95 text-sm mt-2">
+                            Acessar Painel
+                        </button>
+                        
+                        <div class="flex justify-between items-center text-xs font-semibold pt-4 border-t border-slate-100">
+                            <button onclick="app.renderForgotPassword()" class="text-slate-500 hover:text-fire-700 transition-colors">Esqueci minha senha</button>
+                            <button onclick="app.renderRegister()" class="text-fire-700 hover:text-fire-800 transition-colors">Solicitar Cadastro</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderRegister() {
+                document.getElementById('auth-forms').innerHTML = `
+                    <div class="flex items-center mb-4">
+                        <button onclick="app.renderLogin()" class="text-slate-400 hover:text-slate-600 mr-2 p-1 rounded-lg hover:bg-slate-100 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <h2 class="text-xl font-bold text-slate-800">Solicitar Novo Cadastro</h2>
+                    </div>
+                    <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome Completo</label>
+                            <input id="reg-nome" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Matrícula</label>
+                                <input id="reg-matricula" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Setor / Área</label>
+                                <input id="reg-setor" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Função</label>
+                                <input id="reg-funcao" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nível de Acesso (RBAC)</label>
+                                <select id="reg-nivel" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors font-medium">
+                                    <option value="BOMBEIRO">BOMBEIRO (Operacional)</option>
+                                    <option value="BRIGADISTA">BRIGADISTA (RNC Apenas)</option>
+                                    <option value="DIREX">DIREX (Gerencial)</option>
+                                    <option value="CILO">CILO (Administrativo)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Senha de Acesso</label>
+                            <input id="reg-senha" type="password" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors">
+                        </div>
+                    </div>
+                    <button onclick="app.doRegister()" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-all shadow-md mt-4 text-xs uppercase tracking-wider">
+                        Enviar Solicitação de Cadastro
+                    </button>
+                `;
+            }
+
+            renderForgotPassword() {
+                document.getElementById('auth-forms').innerHTML = `
+                    <div class="flex items-center mb-4">
+                        <button onclick="app.renderLogin()" class="text-slate-400 hover:text-slate-600 mr-2 p-1 rounded-lg hover:bg-slate-100 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <h2 class="text-xl font-bold text-slate-800">Recuperar Senha</h2>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+                        Informe sua matrícula cadastrada. A notificação de redefinição de senha será enviada ao Administrador CILO.
+                    </p>
+                    <div class="mb-4">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Matrícula</label>
+                        <input id="reset-id" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-fire-600 focus:ring-2 focus:ring-fire-600/20 text-sm" placeholder="Ex: 12345">
+                    </div>
+                    <button onclick="app.doRequestReset()" class="w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl hover:bg-slate-800 transition-colors shadow-md text-xs uppercase tracking-wider">
+                        Solicitar Redefinição
+                    </button>
+                `;
+            }
+
+            login() {
+                const id = document.getElementById('login-id').value.trim();
+                const pass = document.getElementById('login-pass').value.trim();
+                
+                const user = this.users.find(x => (x.matricula === id || x.nome === id) && x.senha === pass);
+                if(user) { 
+                    if(user.aprovado) { 
+                        this.currentUser = user; 
+                        sessionStorage.setItem('FireCheckSession', JSON.stringify(user)); 
+                        this.initApp(); 
+                        this.showToast(`Bem-vindo, ${user.nome}!`);
+                    } else {
+                        this.showModal('Acesso Pendente', 'Seu cadastro ainda está aguardando aprovação pelo Administrador CILO.');
+                    }
+                } else {
+                    this.showModal('Credenciais Inválidas', 'Matrícula ou senha incorretos.');
+                }
+            }
+
+            doRegister() {
+                const matricula = document.getElementById('reg-matricula').value.trim();
+                const nome = document.getElementById('reg-nome').value.trim();
+                const senha = document.getElementById('reg-senha').value.trim();
+                const nivel = document.getElementById('reg-nivel').value;
+                const setor = document.getElementById('reg-setor').value.trim();
+                const funcao = document.getElementById('reg-funcao').value.trim();
+
+                if(!matricula || !senha || !nome) return this.showModal('Campos Incompletos', 'Preencha ao menos Nome, Matrícula e Senha.');
+                if(this.users.find(x => x.matricula === matricula)) return this.showModal('Aviso', 'Matrícula já cadastrada no sistema.');
+
+                const newUser = { matricula, nome, senha, nivel, setor, funcao, aprovado: false, resetRequested: false };
+                this.users.push(newUser); 
+                this.saveUsers(); 
+                
+                this.showModal('Solicitação Enviada', 'Seu cadastro foi registrado com sucesso e está aguardando aprovação do perfil CILO.', () => {
+                    this.renderLogin();
+                });
+            }
+
+            doRequestReset() { 
+                const id = document.getElementById('reset-id').value.trim(); 
+                const user = this.users.find(u => u.matricula === id); 
+                if(user) { 
+                    user.resetRequested = true; 
+                    this.saveUsers(); 
+                    this.showModal('Solicitação Registrada', 'Sua solicitação de nova senha foi encaminhada para o painel CILO.', () => {
+                        this.renderLogin();
+                    });
+                } else {
+                    this.showModal('Não Encontrado', 'Nenhum usuário cadastrado com esta matrícula.');
+                }
+            }
+
+            logout() { 
+                sessionStorage.removeItem('FireCheckSession'); 
+                location.reload(); 
+            }
+
+            initApp() {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-sidebar').classList.remove('hidden');
+                document.getElementById('main-panel').classList.remove('hidden');
+                document.getElementById('user-name-display').innerText = this.currentUser.nome;
+                document.getElementById('user-role-display').innerText = `PERFIL: ${this.currentUser.nivel}`;
+                this.renderSidebar();
+                this.renderBottomNav();
+                
+                // Redireciona: respeita hash inicial se válido, senão primeiro módulo permitido
+                const allowedModules = CONFIG.permissions[this.currentUser.nivel] || [];
+                const hash = (window.location.hash || '').replace('#', '');
+                const hashModule = CONFIG.modules.find(m => m.id === hash);
+                const defaultModule = (hashModule && allowedModules.includes(hashModule.id))
+                    ? hashModule.id
+                    : (allowedModules.includes('dashboard') ? 'dashboard' : allowedModules[0]);
+                this.navigateTo(defaultModule);
+            }
+
+            renderBottomNav() {
+                const nav = document.getElementById('bottom-nav-items');
+                if(!nav) return;
+                const role = this.currentUser.nivel;
+                const allowedModules = CONFIG.permissions[role] || [];
+                
+                nav.innerHTML = CONFIG.modules.filter(m => allowedModules.includes(m.id)).map(m => 
+                    `<button onclick="app.navigateTo('${m.id}')" data-id="${m.id}" class="bottom-nav-item flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-[9px] font-semibold text-slate-500 flex-shrink-0 min-w-[52px]">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${m.icon}"></path></svg>
+                        <span class="truncate max-w-[64px]">${m.title.split(' - ')[0]}</span>
+                    </button>`
+                ).join('');
+                this.updateBottomNavActive();
+            }
+
+            updateBottomNavActive() {
+                document.querySelectorAll('.bottom-nav-item').forEach(el => {
+                    el.classList.remove('active', 'text-fire-600');
+                    el.classList.add('text-slate-500');
+                    if(el.dataset.id === this.currentModule) {
+                        el.classList.add('active', 'text-fire-600');
+                        el.classList.remove('text-slate-500');
+                    }
+                });
+            }
+
+            renderSidebar() {
+                const nav = document.getElementById('nav-menu');
+                if(!nav) return;
+                const role = this.currentUser.nivel;
+                const allowedModules = CONFIG.permissions[role] || [];
+                
+                nav.innerHTML = CONFIG.modules.filter(m => allowedModules.includes(m.id)).map(m => 
+                    `<button onclick="app.navigateTo('${m.id}')" data-id="${m.id}" class="nav-item w-full flex items-center px-3.5 py-3 text-xs font-semibold rounded-xl transition-all text-slate-400 hover:bg-slate-800 hover:text-white border-l-4 border-transparent">
+                        <svg class="w-4 h-4 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${m.icon}"></path></svg>
+                        <span class="truncate">${m.title}</span>
+                    </button>`
+                ).join('');
+            }
+
+            toggleSidebar(forceOpen = null) {
+                const sidebar = document.getElementById('main-sidebar');
+                const backdrop = document.getElementById('sidebar-backdrop');
+                if (!sidebar) return;
+                const isOpen = forceOpen === null ? !sidebar.classList.contains('open') : forceOpen;
+                if (isOpen) {
+                    sidebar.classList.add('open');
+                    backdrop?.classList.add('open');
+                } else {
+                    sidebar.classList.remove('open');
+                    backdrop?.classList.remove('open');
+                }
+            }
+
+            navigateTo(moduleId, skipPush = false) {
+                this.currentModule = moduleId;
+                this.adminMode = 'list';
+                this.userToEdit = null;
+                this.submissionConfirmed = false;
+                this.submissionStatus = null;
+                // Fechar sidebar mobile ao navegar
+                this.toggleSidebar(false);
+                
+                document.querySelectorAll('.nav-item').forEach(el => {
+                    el.classList.remove('bg-slate-800', 'text-white', 'border-fire-500');
+                    el.classList.add('border-transparent', 'text-slate-400');
+                    if(el.dataset.id === moduleId) {
+                        el.classList.add('bg-slate-800', 'text-white', 'border-fire-500');
+                        el.classList.remove('border-transparent', 'text-slate-400');
+                    }
+                });
+                this.updateBottomNavActive();
+                
+                // Roteamento unificado: atualiza hash da URL via history.pushState
+                if (!skipPush && moduleId) {
+                    try {
+                        window.history.pushState({ module: moduleId }, '', '#' + moduleId);
+                    } catch(e) { /* iframe srcdoc pode restringir pushState */ }
+                }
+                
+                const mod = CONFIG.modules.find(m => m.id === moduleId);
+                const titleEl = document.getElementById('page-title');
+                if(titleEl && mod) titleEl.innerHTML = `<span class="p-1.5 bg-slate-100 rounded-lg text-slate-700"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${mod.icon}"></path></svg></span> ${mod.title}`;
+                
+                this.renderActionButtons();
+                this.render();
+                // Carrega estado da nuvem para módulos de checklist
+                if (mod && ['checklist','form','extinguisher'].includes(mod.type)) {
+                    this.currentVistoriaId = null;
+                    this.loadEquipamentosPorTipo(moduleId);
+                    this.loadVistoriaFromCloud(moduleId);
+                }
+                if (moduleId === 'manager') this.loadAllVistorias();
+                if (moduleId === 'equipamentos') this.equipCarregarLista();
+                if (moduleId === 'dea') this.deaCarregarTudo();
+            }
+
+            render() {
+                const container = document.getElementById('content-area');
+                if(!container) return;
+                const module = CONFIG.modules.find(m => m.id === this.currentModule);
+                
+                container.className = "max-w-[210mm] mx-auto bg-white shadow-xl rounded-xl min-h-[297mm] print:shadow-none print:w-full print:max-w-none print:rounded-none p-8 print:p-0 transition-all";
+                
+                if (module.id === 'dashboard') { 
+                    container.innerHTML = this.renderDashboard(); 
+                    container.className = "max-w-7xl mx-auto p-2 bg-transparent shadow-none min-h-0"; 
+                }
+                else if (module.id === 'manager') { 
+                    container.innerHTML = this.renderManager(); 
+                    container.className = "max-w-7xl mx-auto p-2 bg-transparent shadow-none min-h-0"; 
+                }
+                else if (module.id === 'admin') { 
+                    container.className = "max-w-7xl mx-auto p-2 bg-transparent shadow-none min-h-0";
+                    container.innerHTML = this.renderAdminPanel();
+                }
+                else if (module.id === 'relatorios') {
+                    container.className = "max-w-7xl mx-auto p-2 bg-transparent shadow-none min-h-0";
+                    container.innerHTML = this.renderConsultarRelatorios();
+                }
+                else if (module.id === 'equipamentos') {
+                    container.className = "max-w-7xl mx-auto p-2 bg-transparent shadow-none min-h-0";
+                    container.innerHTML = this.renderEquipamentos();
+                }
+                else if (module.id === 'dea') {
+                    container.className = "max-w-7xl mx-auto p-2 bg-transparent shadow-none min-h-0";
+                    container.innerHTML = this.renderDEA();
+                }
+                else {
+                    let content = this.renderHeader(module.subtitle);
+                    if (module.type === 'checklist') content += this.renderChecklist(module.id);
+                    else if (module.type === 'form') content += this.renderIT16Form();
+                    else if (module.type === 'extinguisher') content += this.renderIT21();
+                    else if (module.type === 'rnc') content += this.renderRNC();
+                    else if (module.type === 'aph') content += this.renderAPH();
+                    else if (module.type === 'kittrauma') content += this.renderKitTrauma();
+                    content += this.renderFooter();
+                    container.innerHTML = content;
+                }
+            }
+
+            renderDashboard() { 
+                const role = this.currentUser.nivel;
+                const allowed = CONFIG.permissions[role] || [];
+                
+                return `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${CONFIG.modules.filter(m => m.id !== 'dashboard' && allowed.includes(m.id)).map(m => `
+                        <div onclick="app.navigateTo('${m.id}')" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-xl hover:border-fire-500/40 transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between">
+                            <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+                                <svg class="w-24 h-24 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="${m.icon}"></path></svg>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div class="p-3.5 rounded-xl bg-fire-50 text-fire-700 group-hover:bg-fire-700 group-hover:text-white transition-colors shadow-sm">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${m.icon}"></path></svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-base text-slate-800 group-hover:text-fire-700 transition-colors">${m.title}</h3>
+                                        <p class="text-[10px] text-slate-400 uppercase font-mono tracking-wider">${m.subtitle}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-fire-700">
+                                <span>Acessar Módulo</span>
+                                <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>`; 
+            }
+
+            renderManager() { 
+                let totalItems = 0, okItems = 0, nokItems = 0; 
+                const systemStats = [];
+                const cloudVistorias = this.allVistorias || [];
+
+                ['it22', 'it19', 'pcf', 'saida'].forEach(modId => {
+                    const modConfig = CONFIG.checklists[modId]; 
+                    let modTotal = 0, modOk = 0;
+                    const modVistorias = cloudVistorias.filter(v => v.modulo === modId);
+                    if (modConfig) {
+                        modConfig.forEach(section => section.q.forEach(q => {
+                            const id = q.split(' ')[0];
+                            const key = `${modId}-${id}`;
+                            modVistorias.forEach(v => {
+                                const val = v.answers?.[key];
+                                if (val) { modTotal++; totalItems++; if (val === 'sim') { modOk++; okItems++; } else { nokItems++; } }
+                            });
+                        }));
+                    }
+                    const percent = modTotal > 0 ? Math.round((modOk / modTotal) * 100) : 100;
+                    const modInfo = CONFIG.modules.find(x => x.id === modId);
+                    systemStats.push({ name: modInfo ? modInfo.title : modId, percent, total: modTotal, issues: modTotal - modOk });
+                });
+
+                const globalPercent = totalItems > 0 ? Math.round((okItems / totalItems) * 100) : 100;
+
+                return `
+                <div class="space-y-6">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Sincronizado em tempo real
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-mono">${cloudVistorias.length} vistoria(s) ativa(s)</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Taxa de Conformidade Global</span>
+                            <div class="mt-2 text-4xl font-extrabold ${globalPercent >= 80 ? 'text-emerald-600' : 'text-fire-600'}">${globalPercent}%</div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Itens Avaliados</span>
+                            <div class="mt-2 text-4xl font-extrabold text-slate-800">${totalItems}</div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Não Conformidades Identificadas</span>
+                            <div class="mt-2 text-4xl font-extrabold text-fire-600">${nokItems}</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-6">Status Individual por Instrução Técnica</h3>
+                        <div class="space-y-6">
+                            ${systemStats.map(s => `
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-sm font-bold text-slate-700">${s.name}</span>
+                                        <span class="text-xs font-mono font-bold ${s.issues > 0 ? 'text-fire-600' : 'text-emerald-600'}">
+                                            ${s.issues > 0 ? `${s.issues} não conformidade(s)` : '100% Conforme'}
+                                        </span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                                        <div class="${s.percent >= 80 ? 'bg-emerald-500' : 'bg-fire-600'} h-3 rounded-full transition-all" style="width: ${s.percent}%"></div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>`; 
+            }
+
+            renderAdminPanel() { 
+                if (this.adminMode === 'create') return this.renderAdminCreateUser();
+                if (this.adminMode === 'edit') return this.renderAdminEditUser();
+                
+                const pending = this.users.filter(u => !u.aprovado); 
+                const resetRequests = this.users.filter(u => u.resetRequested);
+
+                return `
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-8">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-lg mb-1">Painel Administrativo CILO</h3>
+                            <p class="text-xs text-slate-500">Gestão de usuários, permissões e aprovações do sistema.</p>
+                        </div>
+                        <button onclick="app.adminShowCreate()" class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-fire-700 hover:bg-fire-800 rounded-xl shadow-md transition-all transform active:scale-95">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                            Incluir Novo Usuário
+                        </button>
+                    </div>
+
+                    ${resetRequests.length > 0 ? `
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                            <h4 class="text-xs font-bold text-amber-800 uppercase mb-3">Solicitações de Redefinição de Senha (${resetRequests.length})</h4>
+                            <div class="space-y-2">
+                                ${resetRequests.map(u => `
+                                    <div class="flex items-center justify-between bg-white p-3 rounded-lg border border-amber-200">
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-800">${u.nome} (${u.matricula})</p>
+                                            <p class="text-[10px] text-slate-500">${u.setor || 'Setor N/A'} &bull; ${u.nivel}</p>
+                                        </div>
+                                        <button onclick="app.adminResetPassword('${u.matricula}')" class="px-3 py-1.5 text-xs font-bold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors">
+                                            Resetar Senha para "123456"
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Usuários Pendentes de Aprovação (${pending.length})</h4>
+                        ${pending.length === 0 ? '<p class="text-xs text-slate-400 italic">Nenhuma solicitação de cadastro pendente no momento.</p>' : `
+                            <div class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                                ${pending.map(u => `
+                                    <div class="flex items-center justify-between p-4 bg-slate-50/50">
+                                        <div>
+                                            <p class="text-sm font-bold text-slate-800">${u.nome}</p>
+                                            <p class="text-xs text-slate-500">Matrícula: <span class="font-mono">${u.matricula}</span> &bull; Nível: <span class="font-bold text-fire-700">${u.nivel}</span></p>
+                                        </div>
+                                        <button onclick="app.adminApprove('${u.matricula}')" class="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow transition-colors">
+                                            Aprovar Acesso
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `}
+                    </div>
+
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Usuários Cadastrados (${this.users.length})</h4>
+                        <div class="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">Matrícula</th>
+                                        <th class="p-3">Nome</th>
+                                        <th class="p-3">Setor</th>
+                                        <th class="p-3">Perfil RBAC</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3 text-center no-print">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${this.users.map(u => `
+                                        <tr class="hover:bg-slate-50 transition-colors">
+                                            <td class="p-3 font-mono font-bold">${u.matricula}</td>
+                                            <td class="p-3 font-semibold text-slate-700">${u.nome}</td>
+                                            <td class="p-3 text-slate-600">${u.setor || '-'}</td>
+                                            <td class="p-3"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 font-bold rounded text-[10px]">${u.nivel}</span></td>
+                                            <td class="p-3"><span class="${u.aprovado ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}">${u.aprovado ? 'Aprovado' : 'Pendente'}</span></td>
+                                            <td class="p-3 no-print">
+                                                <div class="flex items-center justify-center gap-2">
+                                                    <button onclick="app.adminShowEdit('${u.matricula}')" title="Editar usuário" class="p-1.5 text-slate-500 hover:text-fire-700 hover:bg-slate-100 rounded-lg transition-colors">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                                    </button>
+                                                    ${u.matricula !== 'CILOIMREA' ? `
+                                                    <button onclick="app.adminDeleteUser('${u.matricula}')" title="Excluir usuário" class="p-1.5 text-slate-500 hover:text-fire-600 hover:bg-slate-100 rounded-lg transition-colors">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                    </button>
+                                                    ` : '<span class="text-[9px] text-slate-300 italic">Admin Root</span>'}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>`; 
+            }
+
+            renderAdminCreateUser() {
+                return `
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 max-w-2xl mx-auto">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-lg mb-1">Incluir Novo Usuário</h3>
+                            <p class="text-xs text-slate-500">Cadastre um usuário já aprovado no sistema.</p>
+                        </div>
+                        <button onclick="app.adminCancelEdit()" class="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome Completo *</label>
+                            <input id="adm-nome" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Matrícula *</label>
+                                <input id="adm-matricula" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs font-mono transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Setor / Área</label>
+                                <input id="adm-setor" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Função</label>
+                                <input id="adm-funcao" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nível de Acesso (RBAC) *</label>
+                                <select id="adm-nivel" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs font-medium transition-colors">
+                                    <option value="BOMBEIRO">BOMBEIRO (Operacional)</option>
+                                    <option value="BRIGADISTA">BRIGADISTA (RNC Apenas)</option>
+                                    <option value="DIREX">DIREX (Gerencial)</option>
+                                    <option value="CILO">CILO (Administrativo)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Senha de Acesso *</label>
+                            <input id="adm-senha" type="text" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs font-mono transition-colors" placeholder="Defina uma senha inicial">
+                        </div>
+                    </div>
+                    <div class="flex gap-3 mt-6">
+                        <button onclick="app.adminCancelEdit()" class="flex-1 px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200">
+                            Cancelar
+                        </button>
+                        <button onclick="app.adminCreateUser()" class="flex-1 px-4 py-3 text-xs font-bold text-white bg-fire-700 hover:bg-fire-800 rounded-xl shadow-md transition-all transform active:scale-95 uppercase tracking-wider">
+                            Cadastrar Usuário
+                        </button>
+                    </div>
+                </div>`;
+            }
+
+            renderAdminEditUser() {
+                const u = this.users.find(x => x.matricula === this.userToEdit);
+                if (!u) { this.adminMode = 'list'; return this.renderAdminPanel(); }
+                
+                return `
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 max-w-2xl mx-auto">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-lg mb-1">Editar Usuário</h3>
+                            <p class="text-xs text-slate-500">Alterar dados e permissões de <span class="font-bold text-slate-700">${u.nome}</span>.</p>
+                        </div>
+                        <button onclick="app.adminCancelEdit()" class="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome Completo *</label>
+                            <input id="edt-nome" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors" value="${u.nome}">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Matrícula</label>
+                                <input id="edt-matricula" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-100 outline-none text-xs font-mono cursor-not-allowed" value="${u.matricula}" disabled>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Setor / Área</label>
+                                <input id="edt-setor" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors" value="${u.setor || ''}">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Função</label>
+                                <input id="edt-funcao" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs transition-colors" value="${u.funcao || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nível de Acesso (RBAC) *</label>
+                                <select id="edt-nivel" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs font-medium transition-colors">
+                                    <option value="BOMBEIRO" ${u.nivel === 'BOMBEIRO' ? 'selected' : ''}>BOMBEIRO (Operacional)</option>
+                                    <option value="BRIGADISTA" ${u.nivel === 'BRIGADISTA' ? 'selected' : ''}>BRIGADISTA (RNC Apenas)</option>
+                                    <option value="DIREX" ${u.nivel === 'DIREX' ? 'selected' : ''}>DIREX (Gerencial)</option>
+                                    <option value="CILO" ${u.nivel === 'CILO' ? 'selected' : ''}>CILO (Administrativo)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nova Senha (em branco = manter)</label>
+                                <input id="edt-senha" type="text" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs font-mono transition-colors" placeholder="••••••••">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status de Acesso</label>
+                                <select id="edt-status" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-fire-600 outline-none text-xs font-medium transition-colors">
+                                    <option value="true" ${u.aprovado ? 'selected' : ''}>Aprovado</option>
+                                    <option value="false" ${!u.aprovado ? 'selected' : ''}>Pendente</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 mt-6">
+                        <button onclick="app.adminCancelEdit()" class="flex-1 px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200">
+                            Cancelar
+                        </button>
+                        <button onclick="app.adminUpdateUser()" class="flex-1 px-4 py-3 text-xs font-bold text-white bg-fire-700 hover:bg-fire-800 rounded-xl shadow-md transition-all transform active:scale-95 uppercase tracking-wider">
+                            Salvar Alterações
+                        </button>
+                    </div>
+                </div>`;
+            }
+
+            adminApprove(matricula) { 
+                const u = this.users.find(x => x.matricula === matricula); 
+                if(u) { 
+                    u.aprovado = true; 
+                    this.saveUsers(); 
+                    this.showToast(`Acesso aprovado para ${u.nome}!`);
+                    this.render(); 
+                } 
+            }
+
+            adminResetPassword(matricula) {
+                const u = this.users.find(x => x.matricula === matricula);
+                if(u) {
+                    u.senha = '123456';
+                    u.resetRequested = false;
+                    this.saveUsers();
+                    this.showModal('Senha Redefinida', `A senha do usuário ${u.nome} foi alterada para "123456".`);
+                    this.render();
+                }
+            }
+
+            // --- GESTÃO CRUD DE USUÁRIOS (Admin CILO) ---
+            adminShowCreate() {
+                this.adminMode = 'create';
+                this.render();
+            }
+
+            adminShowEdit(matricula) {
+                this.adminMode = 'edit';
+                this.userToEdit = matricula;
+                this.render();
+            }
+
+            adminCancelEdit() {
+                this.adminMode = 'list';
+                this.userToEdit = null;
+                this.render();
+            }
+
+            adminCreateUser() {
+                const nome = document.getElementById('adm-nome').value.trim();
+                const matricula = document.getElementById('adm-matricula').value.trim();
+                const senha = document.getElementById('adm-senha').value.trim();
+                const nivel = document.getElementById('adm-nivel').value;
+                const setor = document.getElementById('adm-setor').value.trim();
+                const funcao = document.getElementById('adm-funcao').value.trim();
+
+                if (!nome || !matricula || !senha) return this.showModal('Campos Incompletos', 'Preencha Nome, Matrícula e Senha.');
+                if (this.users.find(x => x.matricula === matricula)) return this.showModal('Aviso', 'Matrícula já cadastrada no sistema.');
+
+                this.users.push({ matricula, nome, senha, nivel, setor, funcao, aprovado: true, resetRequested: false });
+                this.saveUsers();
+                this.showToast(`Usuário ${nome} cadastrado com sucesso!`);
+                this.adminMode = 'list';
+                this.render();
+            }
+
+            adminUpdateUser() {
+                const u = this.users.find(x => x.matricula === this.userToEdit);
+                if (!u) return;
+
+                const nome = document.getElementById('edt-nome').value.trim();
+                const nivel = document.getElementById('edt-nivel').value;
+                const setor = document.getElementById('edt-setor').value.trim();
+                const funcao = document.getElementById('edt-funcao').value.trim();
+                const senha = document.getElementById('edt-senha').value.trim();
+                const aprovado = document.getElementById('edt-status').value === 'true';
+
+                if (!nome) return this.showModal('Aviso', 'O nome não pode ficar em branco.');
+
+                u.nome = nome;
+                u.nivel = nivel;
+                u.setor = setor;
+                u.funcao = funcao;
+                u.aprovado = aprovado;
+                if (senha) u.senha = senha;
+
+                this.saveUsers();
+                this.showToast(`Dados de ${nome} atualizados com sucesso!`);
+                this.adminMode = 'list';
+                this.userToEdit = null;
+                this.render();
+            }
+
+            adminDeleteUser(matricula) {
+                if (matricula === 'CILOIMREA') return this.showModal('Aviso', 'O administrador principal não pode ser excluído.');
+                const u = this.users.find(x => x.matricula === matricula);
+                if (!u) return;
+                this.showModal('Excluir Usuário', `Tem certeza que deseja excluir o usuário "${u.nome}"? Esta ação não pode ser desfeita.`, () => {
+                    this.users = this.users.filter(x => x.matricula !== matricula);
+                    this.saveUsers();
+                    this.showToast('Usuário excluído do sistema.');
+                    this.render();
+                });
+            }
+            
+            renderHeader(subtitle) {
+                const h = this.state.header;
+                const isCilo = this.currentUser && this.currentUser.nivel === 'CILO';
+                const disabledAttr = isCilo ? '' : 'disabled';
+                const inputClass = isCilo ? 'bg-white border-b-2 border-fire-200 focus:border-fire-600' : 'bg-transparent border-b border-slate-200 text-slate-600 cursor-not-allowed';
+                const modCode = MODULE_CODES[this.currentModule] || { prefix: 'VST', label: '' };
+                const reportNum = this.emittedReportNumber || `${modCode.prefix}-###`;
+                
+                return `
+                <div class="mb-6 relative">
+                    <div class="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-4">
+                        <div>
+                            <h1 class="text-xl font-black uppercase tracking-tight text-slate-900">Relatório Técnico de Vistoria</h1>
+                            <h2 class="text-xs font-mono text-slate-500 uppercase font-bold">${subtitle}</h2>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold font-mono text-fire-700 bg-fire-50 px-2.5 py-1 rounded border border-fire-200 print:border-none print:p-0">FireCheck PRO</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-12 gap-4 text-xs border border-slate-200 p-4 rounded-xl bg-slate-50/50 print:border-none print:p-0 print:bg-transparent">
+                        <div class="col-span-12 md:col-span-6 print:col-span-6">
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                Relatório realizado por
+                            </label>
+                            <input value="${h.respTecnico || ''}" oninput="app.updateHeader('respTecnico', this.value)" ${disabledAttr} class="w-full font-bold uppercase outline-none py-1 transition-colors ${inputClass}" placeholder="Nome do Responsável">
+                        </div>
+                        <div class="col-span-12 md:col-span-6 print:col-span-6">
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                ${(this.currentModule === 'pcf' || this.currentModule === 'saida') ? 'Endereço do Local da Vistoria' : 'Proprietário / Resp. Uso'} ${isCilo ? '(Editável)' : '(Somente Leitura)'} &middot; Nº ${reportNum}
+                            </label>
+                            <input value="${h.proprietario || ''}" oninput="app.updateHeader('proprietario', this.value)" ${disabledAttr} class="w-full font-bold uppercase outline-none py-1 transition-colors ${inputClass}" placeholder="${(this.currentModule === 'pcf' || this.currentModule === 'saida') ? 'Endereço completo do local vistoriado' : 'Nome do Proprietário'}">
+                        </div>
+                        <div class="col-span-12 mt-1 flex justify-between items-center text-[10px] text-slate-500 font-mono">
+                            <span>Data de Emissão: ${h.data}</span>
+                            <span>Código do Relatório: <strong class="text-fire-700">${reportNum}</strong> &middot; Sistema Auditável NBR/IT</span>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            renderFooter() {
+                const h = this.state.header;
+                return `
+                <div class="mt-10 pt-6 border-t-2 border-slate-900 avoid-break relative">
+                    <p class="text-[10px] text-justify mb-8 text-slate-600 print:text-black leading-relaxed">
+                        Declaro que os itens acima descritos foram devidamente verificados e encontram-se nas condições registradas neste documento, assumindo responsabilidade técnica integral pelas informações preenchidas, estando ciente das implicações legais vigentes conforme diretrizes do Corpo de Bombeiros e Normas ABNT.
+                    </p>
+                    <div class="flex justify-between items-end gap-8">
+                        <div class="flex-1 text-center">
+                            <div class="border-b border-black mb-1.5 h-8"></div>
+                            <div class="text-[10px] font-bold uppercase text-slate-800">${this.currentUser ? this.currentUser.nome : ''}</div>
+                        </div>
+                        <div class="flex-1 text-center">
+                            <div class="border-b border-black mb-1.5 h-8"></div>
+                            <div class="text-[10px] font-bold uppercase text-slate-800">${this.currentUser ? this.currentUser.nome : ''}</div>
+                        </div>
+                        <div class="w-28 text-center">
+                            <div class="border-b border-black mb-1.5 h-8 flex items-end justify-center font-mono text-xs font-bold">${h.data}</div>
+                            <div class="text-[9px] text-slate-500 uppercase font-bold">DATA</div>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            renderChecklist(modId) {
+                const sections = CONFIG.checklists[modId] || [];
+                let html = '<div class="space-y-6">';
+                
+                // Seletor dinâmico de equipamentos baseado nos códigos cadastrados
+                html += this.renderEquipamentoSelector(modId);
+
+                // Renderização das Seções do Checklist
+                sections.forEach(sec => {
+                    html += `
+                    <div class="border border-slate-200 rounded-xl overflow-hidden print:border-black avoid-break shadow-sm">
+                        <div class="bg-slate-50 print:bg-slate-100 px-4 py-2 border-b border-slate-200 print:border-black flex font-bold text-xs uppercase items-center text-slate-700">
+                            <div class="flex-grow pl-1">${sec.t}</div>
+                            <div class="w-12 text-center text-[10px]">SIM</div>
+                            <div class="w-12 text-center text-[10px]">NÃO</div>
+                            <div class="w-12 text-center text-[10px] text-fire-600">NC</div>
+                        </div>
+                        <div class="bg-white divide-y divide-slate-100 print:divide-black">`;
+                        
+                        sec.q.forEach(q => {
+                            const id = q.split(' ')[0]; 
+                            const key = `${modId}-${id}`; 
+                            const val = this.state.answers[key];
+                            
+                            html += `
+                            <div class="flex items-stretch text-xs group hover:bg-slate-50 transition-colors min-h-[38px]">
+                                <div class="flex-grow px-4 py-2 border-r border-slate-100 print:border-black flex items-center text-slate-700 font-medium">${q}</div>
+                                <div class="w-12 option-btn border-r border-slate-100 print:border-black hover:bg-emerald-50 ${val === 'sim' ? 'bg-emerald-100 text-emerald-800' : 'text-slate-300'}" onclick="app.setAnswer('${key}', 'sim')">
+                                    ${val === 'sim' ? '✓' : '○'}
+                                </div>
+                                <div class="w-12 option-btn border-r border-slate-100 print:border-black hover:bg-red-50 ${val === 'nao' ? 'bg-red-100 text-red-800' : 'text-slate-300'}" onclick="app.setAnswer('${key}', 'nao')">
+                                    ${val === 'nao' ? '✕' : '○'}
+                                </div>
+                                <div class="w-12 option-btn hover:bg-amber-50 ${val === 'nc' ? 'bg-amber-100 text-amber-800 font-bold' : 'text-slate-300'}" onclick="app.setAnswer('${key}', 'nc')">
+                                    ${val === 'nc' ? '!' : '○'}
+                                </div>
+                            </div>`;
+                        });
+                        
+                    html += `</div></div>`;
+                });
+
+                // Bloco de Justificativas de Não Conformidade
+                const justs = this.state.justifications[modId] || [];
+                html += `
+                <div class="mt-8 avoid-break">
+                    <div class="bg-slate-900 text-white px-4 py-2 text-xs font-bold uppercase rounded-t-xl print:bg-black tracking-wider flex justify-between items-center">
+                        <span>Justificativas de Não Conformidade (Obrigatório)</span>
+                        <span class="text-[10px] font-mono font-normal opacity-80">${justs.length} registro(s)</span>
+                    </div>
+                    <div class="border border-slate-200 border-t-0 rounded-b-xl print:border-black min-h-[80px] bg-white divide-y divide-slate-100 print:divide-black">`;
+                    
+                    if (justs.length === 0) {
+                        html += `<div class="p-4 text-xs text-slate-400 italic text-center">Nenhuma não conformidade declarada para este checklist.</div>`;
+                    } else {
+                        justs.forEach((j, idx) => {
+                            html += `
+                            <div class="flex border-b border-slate-100 print:border-black group">
+                                <div class="w-20 border-r border-slate-100 print:border-black p-2.5 flex justify-center bg-slate-50/50">
+                                    <input value="${j.item}" oninput="app.updateJustification('${modId}', ${idx}, 'item', this.value)" class="w-full text-center font-mono font-bold bg-transparent outline-none text-xs text-slate-800" placeholder="Item">
+                                </div>
+                                <div class="flex-grow relative">
+                                    <textarea oninput="app.updateJustification('${modId}', ${idx}, 'text', this.value)" rows="2" class="w-full p-2.5 bg-transparent outline-none resize-none text-xs text-slate-700" placeholder="Descreva detalhadamente a irregularidade encontrada...">${j.text}</textarea>
+                                    <button onclick="app.removeJustification('${modId}', ${idx})" class="no-print absolute right-2 top-2 text-slate-400 hover:text-fire-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                </div>
+                            </div>`;
+                        });
+                    }
+
+                html += `
+                    </div>
+                    <button onclick="app.addJustification('${modId}')" class="no-print w-full py-2.5 mt-3 border-2 border-dashed border-slate-200 text-slate-500 text-xs font-bold rounded-xl hover:bg-slate-50 hover:border-slate-400 hover:text-slate-700 transition-all flex items-center justify-center gap-1">
+                        + Adicionar Justificativa Manual
+                    </button>
+                </div></div>`;
+                
+                return html;
+            }
+
+            renderIT16Form() {
+                const d = this.state.it16;
+                const field = (lbl, key) => `
+                    <div class="mb-4">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">${lbl}</label>
+                        <input value="${d[key] || ''}" oninput="app.updateIT16('${key}', this.value)" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:border-slate-800 transition-colors">
+                    </div>`;
+
+                const toggle = (lbl, key) => `
+                    <div class="flex justify-between items-center py-2.5 border-b border-slate-100">
+                        <span class="text-xs font-semibold text-slate-700">${lbl}</span>
+                        <select onchange="app.updateIT16('${key}', this.value)" class="bg-slate-100 p-1.5 rounded text-xs font-bold text-slate-800 outline-none cursor-pointer">
+                            <option value="Não" ${d[key] === 'Não' ? 'selected' : ''}>Não</option>
+                            <option value="Sim" ${d[key] === 'Sim' ? 'selected' : ''}>Sim</option>
+                        </select>
+                    </div>`;
+
+                return `
+                <div class="grid grid-cols-2 gap-8 mt-4">
+                    <div class="col-span-2 md:col-span-1 border-r border-slate-200 pr-4">
+                        <h3 class="font-bold text-slate-800 border-b-2 border-slate-900 pb-2 uppercase text-xs tracking-wider mb-4">Características Gerais</h3>
+                        ${field('Altura do Edifício (m)', 'altura')}
+                        ${field('Nº de Pavimentos', 'pavimentos')}
+                        ${field('População Estimada', 'populacao')}
+                        ${field('Ocupação Predominante', 'ocupacao')}
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <h3 class="font-bold text-slate-800 border-b-2 border-slate-900 pb-2 uppercase text-xs tracking-wider mb-4">Sistemas de Proteção Instalados</h3>
+                        <div class="bg-slate-50 rounded-xl border border-slate-200 p-3">
+                            ${toggle('Sistema de Hidrantes', 'hidrantes')}
+                            ${toggle('Chuveiros Automáticos (Sprinklers)', 'sprinklers')}
+                            ${toggle('Detecção Automática de Fumaça', 'deteccao')}
+                            ${toggle('Alarme de Incêndio', 'alarme')}
+                            ${toggle('Plano de Intervenção de Emergência', 'plano')}
+                        </div>
+                    </div>
+                    <div class="col-span-2">
+                        <h3 class="font-bold text-slate-800 border-b-2 border-slate-900 pb-2 uppercase text-xs tracking-wider mb-3">Riscos Específicos Identificados</h3>
+                        <textarea oninput="app.updateIT16('risco', this.value)" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-xs text-slate-700 h-24 outline-none resize-none" placeholder="Descreva depósitos de inflamáveis, caldeiras, subestações elétricas...">${d.risco || ''}</textarea>
+                    </div>
+                    <div class="col-span-2">
+                        <h3 class="font-bold text-slate-800 border-b-2 border-slate-900 pb-2 uppercase text-xs tracking-wider mb-3">Observações Gerais de Vistoria</h3>
+                        <textarea oninput="app.updateIT16('obs', this.value)" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-xs text-slate-700 h-28 outline-none resize-none">${d.obs || ''}</textarea>
+                    </div>
+                </div>`;
+            }
+
+            renderIT21() {
+                let html = this.renderEquipamentoSelector('it21');
+                html += `
+                <div class="no-print bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6 shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">Cadastrar Novo Extintor</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        <div class="md:col-span-2">
+                            <input id="ext-loc" class="w-full p-2.5 border border-slate-200 rounded-lg text-xs bg-white outline-none focus:border-slate-800" placeholder="Localização (Ex: 2º Pavimento)">
+                        </div>
+                        <div>
+                            <input id="ext-id" class="w-full p-2.5 border border-slate-200 rounded-lg text-xs bg-white outline-none" placeholder="Identificação / Nº">
+                        </div>
+                        <div>
+                            <select id="ext-type" class="w-full p-2.5 border border-slate-200 rounded-lg text-xs bg-white font-medium outline-none">
+                                <option value="AP (Água Pressurizada)">AP</option>
+                                <option value="PQS (Pó Químico)">PQS</option>
+                                <option value="CO2 (Gás Carbônico)">CO2</option>
+                                <option value="ABC (Multiuso)">ABC</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select id="ext-status" class="w-full p-2.5 border border-slate-200 rounded-lg text-xs bg-white font-medium outline-none">
+                                <option value="OK">OK (Conforme)</option>
+                                <option value="Vencido">Carga Vencida</option>
+                                <option value="Despressurizado">Despressurizado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="app.addExtinguisher()" class="mt-3 w-full bg-slate-900 text-white font-bold py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-xs uppercase tracking-wider">
+                        + Adicionar Extintor
+                    </button>
+                </div>`;
+
+                html += `
+                <div class="border border-slate-200 rounded-xl overflow-hidden print:border-black avoid-break shadow-sm">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-50 border-b border-slate-200 font-bold uppercase text-slate-600">
+                            <tr>
+                                <th class="p-3 border-r border-slate-200">Localização</th>
+                                <th class="p-3 border-r border-slate-200 w-24 text-center">Nº / ID</th>
+                                <th class="p-3 border-r border-slate-200 w-24 text-center">Tipo</th>
+                                <th class="p-3">Situação Operacional</th>
+                                <th class="p-3 w-12 text-center no-print">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 bg-white">`;
+                        
+                        if (this.state.it21.length === 0) {
+                            html += `<tr><td colspan="5" class="p-4 text-center text-slate-400 italic">Nenhum extintor cadastrado nesta vistoria.</td></tr>`;
+                        } else {
+                            this.state.it21.forEach((item, idx) => {
+                                html += `
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-3 border-r border-slate-100 font-semibold text-slate-700">${item.loc}</td>
+                                    <td class="p-3 border-r border-slate-100 text-center font-mono font-bold">${item.id}</td>
+                                    <td class="p-3 border-r border-slate-100 text-center"><span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold text-[10px]">${item.type}</span></td>
+                                    <td class="p-3 border-r border-slate-100 ${item.status === 'OK' ? 'text-emerald-600 font-bold' : 'text-fire-600 font-bold'}">${item.status}</td>
+                                    <td class="p-3 text-center no-print">
+                                        <button onclick="app.removeExtinguisher(${idx})" class="text-slate-400 hover:text-fire-600 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        </button>
+                                    </td>
+                                </tr>`;
+                            });
+                        }
+                        
+                html += `</tbody></table></div>`;
+                return html;
+            }
+
+            // ---- KIT TRAUMA METHODS ----
+            ktUpdate(unitId, section, idx, field, val) {
+                if (!this.state.kittrauma.checks[unitId]) this.state.kittrauma.checks[unitId] = {};
+                const key = `${section}-${idx}`;
+                if (!this.state.kittrauma.checks[unitId][key]) this.state.kittrauma.checks[unitId][key] = {};
+                this.state.kittrauma.checks[unitId][key][field] = val;
+                this.saveState();
+            }
+
+            ktSalvarVerificacao() {
+                const unitId = document.getElementById('kt-unit-select')?.value;
+                const resp = document.getElementById('kt-resp')?.value?.trim();
+                const cargo = document.getElementById('kt-cargo')?.value?.trim();
+                const lacre = document.getElementById('kt-lacre')?.value?.trim();
+                if (!unitId || !resp) return this.showModal('Campos Obrigatórios', 'Selecione a unidade e informe o responsável pela verificação.');
+                const hist = {
+                    id: Date.now(),
+                    unitId,
+                    unitLabel: KIT_UNITS.find(u => u.id === unitId)?.label || unitId,
+                    resp, cargo, lacre,
+                    data: new Date().toLocaleDateString('pt-BR'),
+                    hora: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}),
+                    checks: JSON.parse(JSON.stringify(this.state.kittrauma.checks[unitId] || {}))
+                };
+                if (!this.state.kittrauma.historico) this.state.kittrauma.historico = [];
+                this.state.kittrauma.historico.unshift(hist);
+                this.saveState();
+                this.submissionConfirmed = false;
+                this.submissionStatus = 'sending';
+                this.renderActionButtons();
+                this.sendToGoogleSheets();
+            }
+
+            ktDaysLeft(valStr) {
+                if (!valStr) return null;
+                const d = new Date(valStr);
+                if (isNaN(d)) return null;
+                return Math.ceil((d - new Date()) / 86400000);
+            }
+
+            renderKitTrauma() {
+                if (!this.state.kittrauma) this.state.kittrauma = { checks: {}, historico: [] };
+                const sel = document.getElementById('kt-unit-select')?.value || (this._ktUnit || '');
+                const unitId = sel || KIT_UNITS[0].id;
+                this._ktUnit = unitId;
+                const checks = this.state.kittrauma.checks[unitId] || {};
+                const hist = this.state.kittrauma.historico || [];
+                const today = new Date().toLocaleDateString('sv-SE');
+
+                const renderSection = (title, items, section, colored) => {
+                    const headerBg = colored ? 'bg-amber-600' : 'bg-slate-700';
+                    let h = `<div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4 avoid-break">
+                        <div class="${headerBg} text-white px-4 py-2 text-[11px] font-bold uppercase tracking-wider">${title}</div>
+                        <div class="overflow-x-auto">
+                        <table class="w-full text-[10px]">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th class="p-2 text-left font-bold text-slate-600 w-6">#</th>
+                                <th class="p-2 text-left font-bold text-slate-600">Material / Descrição</th>
+                                <th class="p-2 text-center font-bold text-slate-600 w-14">Unid</th>
+                                <th class="p-2 text-center font-bold text-slate-600 w-14">Prev.</th>
+                                <th class="p-2 text-center font-bold text-slate-600 w-16">Qtd</th>
+                                <th class="p-2 text-center font-bold text-slate-600 w-20">Lote</th>
+                                <th class="p-2 text-center font-bold text-slate-600 w-24">Data Checado</th>
+                                <th class="p-2 text-center font-bold text-slate-600 w-24">Validade</th>
+                                <th class="p-2 text-center font-bold text-slate-600 w-16">Status</th>
+                                <th class="p-2 text-center font-bold text-slate-600 w-20 no-print">Prazo</th>
+                            </tr>
+                        </thead><tbody class="divide-y divide-slate-100 bg-white">`;
+                    items.forEach((item, idx) => {
+                        const key = `${section}-${idx}`;
+                        const c = checks[key] || {};
+                        const days = this.ktDaysLeft(c.validade);
+                        const expired = days !== null && days < 0;
+                        const soon = days !== null && days >= 0 && days <= 30;
+                        const statusVal = c.status || '';
+                        const rowBg = expired ? 'bg-red-50' : soon ? 'bg-amber-50' : '';
+                        h += `<tr class="${rowBg} hover:brightness-95 transition-colors">
+                            <td class="p-2 text-slate-400 font-mono text-center">${idx+1}</td>
+                            <td class="p-2 font-medium text-slate-800">${item.desc} ${item.validade === 'Indefinido' ? '<span class="text-[9px] text-slate-400 font-mono ml-1">DATA INDETERMINADA</span>' : ''}</td>
+                            <td class="p-2 text-center text-slate-600">${item.unid}</td>
+                            <td class="p-2 text-center font-bold text-slate-700">${item.prev}</td>
+                            <td class="p-2 text-center"><input type="number" value="${c.qtd||''}" oninput="app.ktUpdate('${unitId}','${section}',${idx},'qtd',this.value)" class="w-full p-1 border border-slate-200 rounded text-center text-[10px] font-mono outline-none focus:border-slate-800 no-print-input"></td>
+                            <td class="p-2 text-center"><input type="text" value="${c.lote||''}" oninput="app.ktUpdate('${unitId}','${section}',${idx},'lote',this.value)" class="w-full p-1 border border-slate-200 rounded text-center text-[10px] font-mono outline-none focus:border-slate-800 no-print-input" placeholder="Lote"></td>
+                            <td class="p-2 text-center"><input type="date" value="${c.dataChecado||today}" oninput="app.ktUpdate('${unitId}','${section}',${idx},'dataChecado',this.value)" class="w-full p-1 border border-slate-200 rounded text-center text-[10px] outline-none focus:border-slate-800 no-print-input"></td>
+                            <td class="p-2 text-center">${item.validade === 'Indefinido' ? '<span class="text-[9px] text-slate-400">Indef.</span>' : `<input type="date" value="${c.validade||''}" oninput="app.ktUpdate('${unitId}','${section}',${idx},'validade',this.value)" class="w-full p-1 border border-slate-200 rounded text-center text-[10px] outline-none focus:border-slate-800 no-print-input">`}</td>
+                            <td class="p-2 text-center"><select onchange="app.ktUpdate('${unitId}','${section}',${idx},'status',this.value)" class="w-full p-1 border rounded text-[10px] font-bold outline-none no-print-input ${statusVal==='OK'?'border-emerald-300 bg-emerald-50 text-emerald-700':statusVal==='Faltando'?'border-amber-300 bg-amber-50 text-amber-700':statusVal==='Vencido'?'border-red-300 bg-red-50 text-red-700':'border-slate-200 bg-white text-slate-600'}">
+                                <option value="">—</option>
+                                <option value="OK" ${statusVal==='OK'?'selected':''}>✓ OK</option>
+                                <option value="Faltando" ${statusVal==='Faltando'?'selected':''}>⚠ Faltando</option>
+                                <option value="Vencido" ${statusVal==='Vencido'?'selected':''}>✕ Vencido</option>
+                            </select></td>
+                            <td class="p-2 text-center no-print">${days===null?'<span class="text-slate-400">—</span>':expired?`<span class="text-red-600 font-bold text-[9px]">${Math.abs(days)}d VENCIDO</span>`:soon?`<span class="text-amber-600 font-bold text-[9px]">${days}d restantes</span>`:`<span class="text-emerald-600 font-mono text-[9px]">${days}d</span>`}</td>
+                        </tr>`;
+                    });
+                    h += `</tbody></table></div></div>`;
+                    return h;
+                };
+
+                const unitOptions = KIT_UNITS.map(u => `<option value="${u.id}" ${u.id===unitId?'selected':''}>${u.label}</option>`).join('');
+                const selectedUnit = KIT_UNITS.find(u => u.id === unitId);
+
+                // Alert summary
+                const allChecks = checks;
+                let expiredCount = 0, missingCount = 0;
+                ['ext','bolsa','parto'].forEach(sec => {
+                    const arr = sec==='ext'?KIT_EXTERNO:sec==='bolsa'?KIT_BOLSA:KIT_PARTO;
+                    arr.forEach((_,idx) => {
+                        const c = allChecks[`${sec}-${idx}`] || {};
+                        if (c.status === 'Vencido') expiredCount++;
+                        if (c.status === 'Faltando') missingCount++;
+                        const days = this.ktDaysLeft(c.validade);
+                        if (days !== null && days < 0 && c.status !== 'Vencido') expiredCount++;
+                    });
+                });
+
+                let html = `
+                <div class="mb-6">
+                    <div class="flex justify-between items-start border-b-2 border-slate-900 pb-3 mb-4">
+                        <div>
+                            <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono mb-1">IMREA HC FMUSP - REDE LUCY MONTORO</div>
+                            <h1 class="text-lg font-black uppercase tracking-tight text-slate-900">Controle Mensal do Kit Trauma</h1>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold font-mono text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200 print:border-none">FireCheck PRO</span>
+                        </div>
+                    </div>
+
+                    <div class="no-print grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Unidade IMREA</label>
+                            <select id="kt-unit-select" onchange="app._ktUnit=this.value;app.render();" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white text-xs font-medium outline-none focus:border-slate-800">${unitOptions}</select>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Responsável *</label>
+                                <input id="kt-resp" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Nome">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Cargo</label>
+                                <input id="kt-cargo" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800" placeholder="Cargo">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nº Lacre</label>
+                                <input id="kt-lacre" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs font-mono outline-none focus:border-slate-800" placeholder="Lacre">
+                            </div>
+                        </div>
+                    </div>
+
+                    ${(expiredCount > 0 || missingCount > 0) ? `
+                    <div class="no-print flex gap-3 mb-4">
+                        ${expiredCount > 0 ? `<div class="flex-1 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2"><span class="text-lg">⚠️</span><div><div class="text-xs font-bold text-red-700">${expiredCount} item(ns) VENCIDO(S)</div><div class="text-[10px] text-red-500">Verificar e repor imediatamente</div></div></div>` : ''}
+                        ${missingCount > 0 ? `<div class="flex-1 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-2"><span class="text-lg">📦</span><div><div class="text-xs font-bold text-amber-700">${missingCount} item(ns) FALTANDO</div><div class="text-[10px] text-amber-500">Solicitar reposição urgente</div></div></div>` : ''}
+                    </div>` : ''}
+
+                    <div class="hidden print:block mb-4 border border-slate-300 rounded p-3 text-xs">
+                        <div class="grid grid-cols-3 gap-2">
+                            <div><span class="font-bold text-slate-600">Unidade:</span> <span class="font-mono">${selectedUnit?.label || unitId}</span></div>
+                            <div><span class="font-bold text-slate-600">Data:</span> <span class="font-mono">${new Date().toLocaleDateString('pt-BR')}</span></div>
+                            <div><span class="font-bold text-slate-600">Responsável:</span> <span id="print-resp">—</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                ${renderSection('Externo / Equipamentos', KIT_EXTERNO, 'ext', false)}
+                ${renderSection('Material da Bolsa', KIT_BOLSA, 'bolsa', false)}
+                ${renderSection('Kit Parto', KIT_PARTO, 'parto', true)}`;
+
+                // Histórico
+                if (hist.length > 0) {
+                    html += `<div class="no-print mt-6">
+                        <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Histórico de Verificações (${hist.length})
+                        </h3>
+                        <div class="border border-slate-200 rounded-xl overflow-hidden">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3 text-left font-bold text-slate-600">Data / Hora</th>
+                                    <th class="p-3 text-left font-bold text-slate-600">Unidade</th>
+                                    <th class="p-3 text-left font-bold text-slate-600">Responsável</th>
+                                    <th class="p-3 text-center font-bold text-slate-600">Lacre</th>
+                                    <th class="p-3 text-center font-bold text-slate-600 no-print">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${hist.map(h => `<tr class="hover:bg-slate-50">
+                                    <td class="p-3 font-mono text-slate-600">${h.data} ${h.hora}</td>
+                                    <td class="p-3 font-semibold text-slate-800">${h.unitLabel}</td>
+                                    <td class="p-3 text-slate-700">${h.resp}${h.cargo ? ' / '+h.cargo : ''}</td>
+                                    <td class="p-3 text-center font-mono">${h.lacre || '—'}</td>
+                                    <td class="p-3 text-center no-print"><button onclick="app.ktRemoveHistorico(${h.id})" class="text-slate-400 hover:text-fire-600 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table></div></div>`;
+                }
+
+                return html;
+            }
+
+            ktRemoveHistorico(id) {
+                this.showModal('Remover do Histórico', 'Deseja remover este registro do histórico?', () => {
+                    this.state.kittrauma.historico = this.state.kittrauma.historico.filter(h => h.id !== id);
+                    this.saveState(); this.render();
+                });
+            }
+
+            renderRNC() {
+                let html = `
+                <div class="no-print bg-slate-50 border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-fire-600"></span> Registrar Não Conformidade (RNC)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sistema Atingido</label>
+                            <select id="rnc-system" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800">
+                                <option value="Hidrantes">Hidrantes e Mangotinhos</option>
+                                <option value="Alarme e Detecção">Alarme e Detecção</option>
+                                <option value="Extintores">Extintores de Incêndio</option>
+                                <option value="Rotas de Fuga">Rotas de Fuga / Sinalização</option>
+                                <option value="Portas Corta-Fogo">Portas Corta-Fogo</option>
+                                <option value="Outros">Outros Riscos</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Grau de Risco</label>
+                            <select id="rnc-risk" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none focus:border-slate-800 font-bold">
+                                <option value="Baixo" class="text-slate-700">Baixo</option>
+                                <option value="Médio" selected class="text-amber-600">Médio</option>
+                                <option value="Alto" class="text-fire-600">Alto Risco</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Localização Exata</label>
+                            <input id="rnc-loc" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none" placeholder="Ex: Bloco 2 - 3º Pavimento / Hall Leste">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Descrição Técnica da Falha</label>
+                            <textarea id="rnc-desc" class="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-xs outline-none h-20 resize-none" placeholder="Descreva a irregularidade observada..."></textarea>
+                        </div>
+                        <div class="md:col-span-2 bg-white p-3 border border-dashed border-slate-300 rounded-lg text-center">
+                            <input type="file" id="rnc-photo" accept="image/*" class="hidden" onchange="document.getElementById('file-label').innerText = this.files[0] ? this.files[0].name : 'Selecionar Foto da Evidência'">
+                            <label id="file-label" for="rnc-photo" class="cursor-pointer text-xs font-bold text-fire-700 hover:underline">
+                                Selecionar Foto da Evidência
+                            </label>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Processamento automático client-side (Max 800px JPEG)</p>
+                        </div>
+                    </div>
+                    <button onclick="app.addRNC()" class="mt-4 w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors text-xs uppercase tracking-wider">
+                        Gravar Ocorrência no Relatório
+                    </button>
+                </div>`;
+
+                html += `<div class="space-y-6">`;
+                if(this.state.rnc.length === 0) {
+                    html += `<div class="p-8 text-center text-slate-400 italic bg-slate-50 rounded-xl border border-slate-200">Nenhum Relatório de Não Conformidade registrado.</div>`;
+                } else {
+                    this.state.rnc.forEach((item, idx) => {
+                        html += `
+                        <div class="border border-slate-200 rounded-xl overflow-hidden avoid-break print:border-black shadow-sm bg-white">
+                            <div class="bg-slate-50 p-3 border-b border-slate-200 flex justify-between items-center">
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-slate-900 text-white text-[9px] font-mono px-2 py-0.5 rounded font-bold">RNC #${idx + 1}</span>
+                                    <span class="font-bold text-xs uppercase text-slate-800">${item.sys}</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full ${item.risk === 'Alto' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}">${item.risk} Risco</span>
+                                    <button onclick="app.removeRNC(${item.id})" class="no-print text-slate-400 hover:text-fire-600 transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-12 divide-x divide-slate-100">
+                                <div class="col-span-8 p-4 space-y-3">
+                                    <div>
+                                        <span class="text-[9px] text-slate-400 uppercase font-bold block">Localização</span>
+                                        <div class="text-xs font-semibold text-slate-800">${item.loc}</div>
+                                    </div>
+                                    <div>
+                                        <span class="text-[9px] text-slate-400 uppercase font-bold block">Descrição Detalhada</span>
+                                        <div class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded border border-slate-100">${item.desc}</div>
+                                    </div>
+                                </div>
+                                <div class="col-span-4 flex items-center justify-center p-3 bg-slate-50/50">
+                                    ${item.img ? `<img src="${item.img}" class="w-full h-32 object-cover rounded-lg border border-slate-200 shadow-sm">` : `<div class="text-[10px] text-slate-400 italic">Sem evidência fotográfica</div>`}
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                }
+                html += `</div>`;
+                return html;
+            }
+        }
+
+        // Inicializar aplicação
+        window.addEventListener('DOMContentLoaded', () => {
+            new App();
+        });
+    </script>
+</body>
+</html>

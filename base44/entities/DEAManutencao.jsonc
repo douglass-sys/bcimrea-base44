@@ -1,0 +1,82 @@
+{
+  "name": "DEAManutencao",
+  "type": "object",
+  "properties": {
+    "dea_id": {
+      "type": "string",
+      "description": "ID do DEA em manuten\u00e7\u00e3o"
+    },
+    "dea_patrimonio": {
+      "type": "string",
+      "description": "Patrim\u00f4nio do DEA (denormalizado)"
+    },
+    "data_prevista": {
+      "type": "string",
+      "format": "date",
+      "description": "Data prevista para a manuten\u00e7\u00e3o"
+    },
+    "data_execucao": {
+      "type": "string",
+      "format": "date",
+      "description": "Data em que a manuten\u00e7\u00e3o foi executada"
+    },
+    "responsavel": {
+      "type": "string",
+      "description": "Respons\u00e1vel interno pela manuten\u00e7\u00e3o"
+    },
+    "empresa_executante": {
+      "type": "string",
+      "description": "Empresa prestadora do servi\u00e7o"
+    },
+    "itens_substituidos": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o dos itens substitu\u00eddos (bateria, eletrodos, etc.)"
+    },
+    "custo": {
+      "type": "number",
+      "default": 0,
+      "description": "Custo da manuten\u00e7\u00e3o (R$)"
+    },
+    "laudo_tecnico": {
+      "type": "string",
+      "description": "Laudo t\u00e9cnico resultante da manuten\u00e7\u00e3o"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Planejada",
+        "Em Execu\u00e7\u00e3o",
+        "Conclu\u00edda",
+        "Atrasada"
+      ],
+      "default": "Planejada"
+    },
+    "operador": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que registrou"
+    },
+    "operador_id": {
+      "type": "string",
+      "description": "Matr\u00edcula do usu\u00e1rio"
+    },
+    "operador_perfil": {
+      "type": "string",
+      "description": "N\u00edvel RBAC do usu\u00e1rio"
+    }
+  },
+  "required": [
+    "dea_id",
+    "data_prevista",
+    "status"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": null,
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "name": "DEA",
+  "type": "object",
+  "properties": {
+    "patrimonio": {
+      "type": "string",
+      "description": "N\u00famero de patrim\u00f4nio do DEA"
+    },
+    "localizacao": {
+      "type": "string",
+      "description": "Localiza\u00e7\u00e3o f\u00edsica do equipamento"
+    },
+    "modelo": {
+      "type": "string",
+      "description": "Modelo/fabricante do DEA"
+    },
+    "numero_serie": {
+      "type": "string",
+      "description": "N\u00famero de s\u00e9rie do fabricante"
+    },
+    "data_instalacao": {
+      "type": "string",
+      "format": "date"
+    },
+    "validade_bateria": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de validade da bateria"
+    },
+    "validade_eletrodos": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de validade do conjunto de eletrodos"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Operando",
+        "Em Manuten\u00e7\u00e3o",
+        "Fora de Uso",
+        "Pendente Verifica\u00e7\u00e3o"
+      ],
+      "default": "Pendente Verifica\u00e7\u00e3o"
+    },
+    "frequencia_verificacao": {
+      "type": "string",
+      "enum": [
+        "diaria",
+        "semanal",
+        "mensal",
+        "trimestral",
+        "anual"
+      ],
+      "default": "mensal",
+      "description": "Frequ\u00eancia configur\u00e1vel para verifica\u00e7\u00f5es peri\u00f3dicas"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Arquivamento l\u00f3gico (soft delete)"
+    },
+    "operador": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que cadastrou/editou"
+    },
+    "operador_id": {
+      "type": "string",
+      "description": "Matr\u00edcula do usu\u00e1rio"
+    },
+    "operador_perfil": {
+      "type": "string",
+      "description": "N\u00edvel RBAC do usu\u00e1rio"
+    }
+  },
+  "required": [
+    "patrimonio",
+    "localizacao",
+    "status"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": null,
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
